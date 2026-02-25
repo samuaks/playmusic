@@ -24,8 +24,12 @@ func main() {
 	}
 
 	p := &play.Player{}
-	fmt.Printf("\nPlaying: %s\n", tracks[0].Title)
-	if err := p.Play(tracks[0].Path); err != nil {
-		fmt.Printf("Error playing track: %v\n", err)
+	for _, track := range tracks {
+		fmt.Printf("\nPlaying: %s\n", track.Title)
+		if err := p.Play(track.Path); err != nil {
+			fmt.Printf("Error playing track: %v\n", err)
+		}
+		p.Wait()
 	}
+	fmt.Println("\nPlayList finished.")
 }

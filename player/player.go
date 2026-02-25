@@ -13,6 +13,12 @@ func (p *Player) Stop() {
 	}
 }
 
+func (p *Player) Wait() {
+	if p.cmd != nil {
+		p.cmd.Wait()
+	}
+}
+
 func (p *Player) Play(filepath string) error {
 	p.Stop()
 
