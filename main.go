@@ -2,24 +2,30 @@ package main
 
 import (
 	"fmt"
-	"os"
-	"os/exec"
+	lib "playmusic/library"
+	play "playmusic/player"
 )
 
-func playMP3(filepath string) error {
-	// ffplay comes with ffmpeg
-	cmd := exec.Command("ffplay", "-nodisp", "-autoexit", filepath)
-	return cmd.Run()
-}
-
 func main() {
-	if len(os.Args) < 2 {
-		fmt.Println("Usage: go run main.go <mp3file>")
+	tracks, err := lib.LoadLibrary("Media")
+	if err != nil {
+		fmt.Printf("Error loading library: %v\n", err)
 		return
 	}
 
-	fmt.Println("Playing audio...")
-	if err := playMP3(os.Args[1]); err != nil {
-		fmt.Printf("Error: %v\n", err)
+	if len(tracks) == 0 {
+		fmt.Println("No tracks found in Media/")
+		return
+	}
+
+	fmt.Printf("Loaded %d tracks:\n", len(tracks))
+	for i, track := range tracks {
+		fmt.Printf(" [%d] %s\n", i+1, track.Title)
+	}
+
+	p := &play.Player{}
+	fmt.Printf("\nPlaying: %s\n", tracks[0].Title)
+	if err := p.Play(tracks[0].Path); err != nil {
+		fmt.Printf("Error playing track: %v\n", err)
 	}
 }
