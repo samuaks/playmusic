@@ -1,4 +1,4 @@
-module audio
+module playmusic
 
 go 1.25.5
 
