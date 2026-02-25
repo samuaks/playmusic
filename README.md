@@ -2,6 +2,10 @@
 
 A simple command-line media player that uses FFmpeg to play audio files.
 
+## Things to add: 
+[] Get media length and display it in TUI
+[] Implement Bubble Tea for better TUI experience
+
 ## Usage
 
 ```bash
