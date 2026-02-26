@@ -20,7 +20,7 @@ func main() {
 
 	fmt.Printf("Loaded %d tracks:\n", len(tracks))
 	for i, track := range tracks {
-		fmt.Printf(" [%d] %s\n", i+1, track.Title)
+		fmt.Printf(" [%d] %s (%s)\n", i+1, track.Title, track.FormatDuration())
 	}
 
 	p := &play.Player{}
