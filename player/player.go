@@ -1,6 +1,10 @@
 package player
 
-import "os/exec"
+import (
+	"fmt"
+	"os"
+	"os/exec"
+)
 
 type Player struct {
 	cmd *exec.Cmd
@@ -21,6 +25,10 @@ func (p *Player) Wait() {
 
 func (p *Player) Play(filepath string) error {
 	p.Stop()
+
+	if _, err := os.Stat(filepath); err != nil {
+		return fmt.Errorf("File not found: %s", filepath)
+	}
 
 	p.cmd = exec.Command("ffplay", "-nodisp", "-autoexit", filepath)
 	return p.cmd.Start()
