@@ -1,15 +1,25 @@
 package library
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
+	"time"
 )
 
 type Track struct {
 	Title    string
 	Path     string
 	Filename string
+	Duration time.Duration
+}
+
+func (t Track) FormatDuration() string {
+	minutes := int(t.Duration.Minutes())
+	seconds := int(t.Duration.Seconds()) % 60
+	return fmt.Sprintf("%d:%02d", minutes, seconds)
 }
 
 func LoadLibrary(dir string) ([]Track, error) {
@@ -31,6 +41,16 @@ func LoadLibrary(dir string) ([]Track, error) {
 			Filename: name,
 			Path:     filepath.Join(dir, name),
 		})
+
+		var wg sync.WaitGroup
+		for i := range tracks {
+			wg.Add(1)
+			go func(t *Track) {
+				defer wg.Done()
+				t.Duration, _ = probeDuration(t.Path)
+			}(&tracks[i])
+		}
+		wg.Wait()
 
 	}
 	return tracks, nil
