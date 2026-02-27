@@ -22,6 +22,9 @@ func handleInput(p *play.Player) {
 		case 'r':
 			p.Resume()
 			fmt.Println(c.Colorize("Resumed", c.ColorBold+c.ColorGreen))
+		case 'n':
+			p.Next()
+			fmt.Println(c.Colorize("Skipping to next track...", c.ColorBold+c.ColorBlue))
 		case 'q':
 			p.Stop()
 			fmt.Println(c.Colorize("Exiting...", c.ColorBold+c.ColorRed))

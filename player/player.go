@@ -12,6 +12,7 @@ type Player struct {
 	ctrl       *beep.Ctrl
 	streamer   beep.StreamSeekCloser
 	done       chan struct{}
+	next       chan struct{}
 	sampleRate beep.SampleRate
 }
 
@@ -24,6 +25,7 @@ func (p *Player) Play(path string) error {
 	}
 
 	p.done = make(chan struct{})
+	p.next = make(chan struct{}, 1)
 	p.streamer = streamer
 
 	if p.sampleRate == 0 {
@@ -47,8 +49,13 @@ func (p *Player) Play(path string) error {
 }
 
 func (p *Player) Wait() {
-	if p.done != nil {
-		<-p.done
+	if p.done == nil {
+		return
+	}
+	select {
+	case <-p.done:
+	case <-p.next:
+		p.Stop()
 	}
 }
 
@@ -76,5 +83,11 @@ func (p *Player) Resume() {
 		speaker.Lock()
 		p.ctrl.Paused = false
 		speaker.Unlock()
+	}
+}
+
+func (p *Player) Next() {
+	if p.done != nil {
+		p.next <- struct{}{}
 	}
 }

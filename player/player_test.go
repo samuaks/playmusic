@@ -32,6 +32,11 @@ func TestResumeWithoutPlay(t *testing.T) {
 	p.Resume()
 }
 
+func TestNextWithoutPlay(t *testing.T) {
+	p := &Player{}
+	p.Next()
+}
+
 func TestPlayInvalidFile(t *testing.T) {
 	p := &Player{}
 	err := p.Play("/does/not/exist.mp3")
@@ -103,5 +108,29 @@ func TestPauseResume(t *testing.T) {
 	p.Resume()
 	if p.ctrl.Paused {
 		t.Error("Expected to be resumed")
+	}
+}
+
+func TestNext(t *testing.T) {
+	p := &Player{}
+	err := p.Play(testFile("ShadowsAndDust.mp3"))
+	if err != nil {
+		t.Skipf("skipping, unable to play file: %v", err)
+	}
+	time.Sleep(500 * time.Millisecond)
+	p.Next()
+
+	// anon func to wait for done / next
+	done := make(chan struct{})
+	go func() {
+		p.Wait()
+		close(done)
+	}()
+
+	// check channel if done
+	select {
+	case <-done:
+	case <-time.After(1 * time.Second):
+		t.Error("Expeceted Wait() to return after Next()")
 	}
 }
