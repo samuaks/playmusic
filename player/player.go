@@ -24,18 +24,22 @@ func (p *Player) Play(path string) error {
 		return fmt.Errorf("Decode failed %s: %w", path, err)
 	}
 
-	fmt.Printf(c.Colorize("debug: ", c.ColorBold+c.ColorCyan)+"decoded successfully, format: %v\n", format)
-
 	p.done = make(chan struct{})
 	p.streamer = streamer
 
-	if format.SampleRate != p.sampleRate {
+	if p.sampleRate == 0 {
 		p.sampleRate = format.SampleRate
 		speaker.Init(format.SampleRate, format.SampleRate.N(time.Second/10))
-		fmt.Printf(c.Colorize("debug: ", c.ColorBold+c.ColorCyan)+"speaker initialized with sample rate %v\n", format.SampleRate)
 	}
 
-	p.ctrl = &beep.Ctrl{Streamer: beep.Seq(streamer, beep.Callback(func() {
+	var finalStreamer beep.Streamer
+	if format.SampleRate != p.sampleRate {
+		finalStreamer = beep.Resample(4, format.SampleRate, p.sampleRate, streamer)
+	} else {
+		finalStreamer = streamer
+	}
+
+	p.ctrl = &beep.Ctrl{Streamer: beep.Seq(finalStreamer, beep.Callback(func() {
 		fmt.Println(c.Colorize("debug: callback fired, closing done", c.ColorBold+c.ColorCyan))
 		close(p.done)
 	}))}
