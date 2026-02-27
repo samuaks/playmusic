@@ -47,7 +47,12 @@ func decode(path string) (beep.StreamSeekCloser, beep.Format, error) {
 		if err != nil {
 			return nil, beep.Format{}, err
 		}
-		return decoder(file)
+		streamer, format, err := decoder(file)
+		if err != nil {
+			file.Close()
+			return nil, beep.Format{}, err
+		}
+		return streamer, format, nil
 	}
 
 	if !IsFFmpegAvailable() {
