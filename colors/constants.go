@@ -1,4 +1,4 @@
-package main
+package colors
 
 const (
 	ColorReset = "\033[0m"

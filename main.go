@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	c "playmusic/colors"
 	lib "playmusic/library"
 	play "playmusic/player"
 )
@@ -20,9 +21,9 @@ func main() {
 
 	fmt.Printf("Loaded %d tracks:\n", len(tracks))
 	for i, track := range tracks {
-		index := fmt.Sprintf("%s", "["+Colorize(fmt.Sprintf("%d", i+1), ColorBold+ColorCyan)+"]")
-		title := Colorize(track.Title, ColorWhite)
-		duration := fmt.Sprintf("%s", "("+Colorize(fmt.Sprintf("%s", track.FormatDuration()), ColorBold+ColorCyan)+")")
+		index := fmt.Sprintf("%s", "["+c.Colorize(fmt.Sprintf("%d", i+1), c.ColorBold+c.ColorCyan)+"]")
+		title := c.Colorize(track.Title, c.ColorWhite)
+		duration := fmt.Sprintf("%s", "("+c.Colorize(fmt.Sprintf("%s", track.FormatDuration()), c.ColorBold+c.ColorCyan)+")")
 		fmt.Printf(" %s %s %s\n", index, title, duration)
 	}
 
