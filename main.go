@@ -28,6 +28,8 @@ func main() {
 	}
 
 	p := &play.Player{}
+	go handleInput(p)
+
 	for _, track := range tracks {
 		fmt.Printf("\nPlaying: %s\n", track.Title)
 		if err := p.Play(track.Path); err != nil {
