@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"playmusic/player"
 	"strings"
 	"sync"
 	"time"
@@ -30,8 +31,10 @@ func LoadLibrary(dir string) ([]Track, error) {
 		return nil, err
 	}
 
+	ffmpegAvailable := player.IsFFmpegAvailable()
+
 	for _, entry := range entries {
-		if entry.IsDir() || !isSupported(entry.Name()) {
+		if entry.IsDir() || !isSupported(entry.Name(), ffmpegAvailable) {
 			continue
 		}
 		name := entry.Name()

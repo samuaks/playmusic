@@ -2,26 +2,45 @@ package library
 
 import (
 	"encoding/json"
+	"fmt"
 	"os/exec"
 	"path/filepath"
+	"playmusic/player"
 	"strconv"
 	"strings"
 	"time"
 )
 
-var supported = map[string]bool{
+var beepFormats = map[string]bool{
 	".mp3":  true,
-	".flac": true,
 	".wav":  true,
-	".m4a":  true,
+	".flac": true,
 	".ogg":  true,
+}
+
+var ffmpegFormats = map[string]bool{
 	".aac":  true,
+	".m4a":  true,
 	".opus": true,
 }
 
-func isSupported(filename string) bool {
+func isSupported(filename string, ffmpegAvailable bool) bool {
 	ext := strings.ToLower(filepath.Ext(filename))
-	return supported[ext]
+	if beepFormats[ext] {
+		return true
+	}
+	return ffmpegAvailable && ffmpegFormats[ext]
+}
+
+func probeDuration(path string) (time.Duration, error) {
+	duration, err := player.ProbeDuration(path)
+	if err == nil && duration > 0 {
+		return duration, nil
+	}
+	if !player.IsFFmpegAvailable() {
+		return 0, fmt.Errorf("could not determine duration and ffmpeg is not available")
+	}
+	return probeWithFFprobe(path)
 }
 
 type ffprobeOutput struct {
@@ -30,7 +49,7 @@ type ffprobeOutput struct {
 	} `json:"format"`
 }
 
-func probeDuration(path string) (time.Duration, error) {
+func probeWithFFprobe(path string) (time.Duration, error) {
 	command := exec.Command("ffprobe", "-v", "quiet", "-print_format", "json", "-show_format", path)
 	output, err := command.Output()
 	if err != nil {

@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-func TestLoadLibrary(t *testing.T) {
+func TestLoadTracks(t *testing.T) {
 	dir := t.TempDir()
 	files := []string{"song1.mp3", "song2.wav", "document.txt"}
 	for _, file := range files {
@@ -16,46 +16,52 @@ func TestLoadLibrary(t *testing.T) {
 
 	tracks, err := LoadLibrary(dir)
 	if err != nil {
-		t.Fatalf("Expected no error, got %v", err)
+		t.Fatalf("expected no error, got %v", err)
 	}
 	if len(tracks) != 2 {
-		t.Fatalf("Expected 2 tracks, got %d", len(tracks))
+		t.Fatalf("expected 2 tracks, got %d", len(tracks))
 	}
 }
 
-func TestLoadEmptyDir(t *testing.T) {
+func TestLoadTracksEmptyDir(t *testing.T) {
 	dir := t.TempDir()
 	tracks, err := LoadLibrary(dir)
 	if err != nil {
-		t.Fatalf("Unexpected error: %v", err)
+		t.Fatalf("unexpected error: %v", err)
 	}
 	if len(tracks) != 0 {
-		t.Fatalf("Expected 0 tracks, got %d", len(tracks))
+		t.Fatalf("expected 0 tracks, got %d", len(tracks))
 	}
 }
 
 func TestLoadTracksInvalidDirectory(t *testing.T) {
 	_, err := LoadLibrary("/non/existent/directory")
 	if err == nil {
-		t.Fatal("Expected an error for non-existent directory, got nil")
+		t.Fatal("expected an error for non-existent directory, got nil")
 	}
 }
 
 func TestIsSupported(t *testing.T) {
 	cases := []struct {
-		filename string
-		want     bool
+		filename    string
+		ffmpegAvail bool
+		want        bool
 	}{
-		{"song.mp3", true},
-		{"track.wav", true},
-		{"document.txt", false},
-		{"image.jpg", false},
-		{"audio.flac", true},
-		{"song.MP3", true},
+		{"song.mp3", false, true},
+		{"track.wav", false, true},
+		{"audio.flac", false, true},
+		{"song.MP3", false, true},
+		{"document.txt", false, false},
+		{"image.jpg", false, false},
+		{"song.m4a", false, false},
+		{"song.m4a", true, true},
+		{"song.aac", true, true},
+		{"song.aac", false, false},
 	}
 	for _, c := range cases {
-		if got := isSupported(c.filename); got != c.want {
-			t.Errorf("isSupported(%q) = %v, want %v", c.filename, got, c.want)
+		got := isSupported(c.filename, c.ffmpegAvail)
+		if got != c.want {
+			t.Errorf("isSupported(%q, ffmpeg=%v) = %v, want %v", c.filename, c.ffmpegAvail, got, c.want)
 		}
 	}
 }
