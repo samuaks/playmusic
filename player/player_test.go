@@ -22,6 +22,16 @@ func TestWaitWithoutPlay(t *testing.T) {
 	p.Wait()
 }
 
+func TestPauseWithoutPlay(t *testing.T) {
+	p := &Player{}
+	p.Pause()
+}
+
+func TestResumeWithoutPlay(t *testing.T) {
+	p := &Player{}
+	p.Resume()
+}
+
 func TestPlayInvalidFile(t *testing.T) {
 	p := &Player{}
 	err := p.Play("/does/not/exist.mp3")
@@ -76,4 +86,22 @@ func TestPlayM4AWithFFmpeg(t *testing.T) {
 		t.Errorf("expected no error playing m4a, got: %v", err)
 	}
 	defer p.Stop()
+}
+
+func TestPauseResume(t *testing.T) {
+	p := &Player{}
+	err := p.Play(testFile("ShadowsAndDust.mp3"))
+	if err != nil {
+		t.Skipf("skipping, unable to play file: %v", err)
+	}
+	defer p.Stop()
+
+	p.Pause()
+	if !p.ctrl.Paused {
+		t.Error("Expected to be paused")
+	}
+	p.Resume()
+	if p.ctrl.Paused {
+		t.Error("Expected to be resumed")
+	}
 }
