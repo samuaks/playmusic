@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"playmusic/player"
+	. "playmusic/decoder"
 	"strings"
 	"sync"
 	"time"
@@ -31,10 +31,8 @@ func LoadLibrary(dir string) ([]Track, error) {
 		return nil, err
 	}
 
-	ffmpegAvailable := player.IsFFmpegAvailable()
-
 	for _, entry := range entries {
-		if entry.IsDir() || !isSupported(entry.Name(), ffmpegAvailable) {
+		if entry.IsDir() || !IsSupported(entry.Name()) {
 			continue
 		}
 		name := entry.Name()
@@ -50,7 +48,7 @@ func LoadLibrary(dir string) ([]Track, error) {
 			wg.Add(1)
 			go func(t *Track) {
 				defer wg.Done()
-				t.Duration, _ = probeDuration(t.Path)
+				t.Duration, _ = ProbeDuration(t.Path)
 			}(&tracks[i])
 		}
 		wg.Wait()

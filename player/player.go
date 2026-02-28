@@ -2,6 +2,7 @@ package player
 
 import (
 	"fmt"
+	d "playmusic/decoder"
 	"time"
 
 	"github.com/gopxl/beep/v2"
@@ -19,7 +20,7 @@ type Player struct {
 func (p *Player) Play(path string) error {
 	p.Stop()
 
-	streamer, format, err := decode(path)
+	streamer, format, err := d.Decode(path)
 	if err != nil {
 		return fmt.Errorf("Decode failed %s: %w", path, err)
 	}
