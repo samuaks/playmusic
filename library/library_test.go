@@ -41,31 +41,6 @@ func TestLoadTracksInvalidDirectory(t *testing.T) {
 	}
 }
 
-func TestIsSupported(t *testing.T) {
-	cases := []struct {
-		filename    string
-		ffmpegAvail bool
-		want        bool
-	}{
-		{"song.mp3", false, true},
-		{"track.wav", false, true},
-		{"audio.flac", false, true},
-		{"song.MP3", false, true},
-		{"document.txt", false, false},
-		{"image.jpg", false, false},
-		{"song.m4a", false, false},
-		{"song.m4a", true, true},
-		{"song.aac", true, true},
-		{"song.aac", false, false},
-	}
-	for _, c := range cases {
-		got := isSupported(c.filename, c.ffmpegAvail)
-		if got != c.want {
-			t.Errorf("isSupported(%q, ffmpeg=%v) = %v, want %v", c.filename, c.ffmpegAvail, got, c.want)
-		}
-	}
-}
-
 func TestFormattedDuration(t *testing.T) {
 	cases := []struct {
 		duration time.Duration

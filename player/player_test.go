@@ -2,6 +2,7 @@ package player
 
 import (
 	"path/filepath"
+	. "playmusic/decoder"
 	"runtime"
 	"testing"
 	"time"

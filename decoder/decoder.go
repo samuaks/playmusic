@@ -1,4 +1,4 @@
-package player
+package decoder
 
 import (
 	"bytes"
@@ -30,6 +30,27 @@ func IsFFmpegAvailable() bool {
 	return ffmpegAvailable
 }
 
+var beepFormats = map[string]bool{
+	".mp3":  true,
+	".wav":  true,
+	".flac": true,
+	".ogg":  true,
+}
+
+var ffmpegFormats = map[string]bool{
+	".aac":  true,
+	".m4a":  true,
+	".opus": true,
+}
+
+func IsSupported(filename string) bool {
+	ext := strings.ToLower(filepath.Ext(filename))
+	if beepFormats[ext] {
+		return true
+	}
+	return ffmpegAvailable && ffmpegFormats[ext]
+}
+
 type decoderFunc func(io.ReadCloser) (beep.StreamSeekCloser, beep.Format, error)
 
 var beepDecoders = map[string]decoderFunc{
@@ -39,7 +60,7 @@ var beepDecoders = map[string]decoderFunc{
 	".ogg":  func(r io.ReadCloser) (beep.StreamSeekCloser, beep.Format, error) { return vorbis.Decode(r) },
 }
 
-func decode(path string) (beep.StreamSeekCloser, beep.Format, error) {
+func Decode(path string) (beep.StreamSeekCloser, beep.Format, error) {
 	ext := strings.ToLower(filepath.Ext(path))
 
 	if decoder, ok := beepDecoders[ext]; ok {
@@ -146,8 +167,8 @@ func (t *tempFileStreamer) Close() error {
 	return err
 }
 
-func ProbeDuration(path string) (time.Duration, error) {
-	streamer, format, err := decode(path)
+func probeDurationWithBeep(path string) (time.Duration, error) {
+	streamer, format, err := Decode(path)
 	if err != nil {
 		return 0, fmt.Errorf("Could not determine duration: %w", err)
 	}
@@ -158,4 +179,40 @@ func ProbeDuration(path string) (time.Duration, error) {
 		return 0, fmt.Errorf("Could not determine duration: invalid sample length")
 	}
 	return format.SampleRate.D(samples), nil
+}
+
+func ProbeDuration(path string) (time.Duration, error) {
+	duration, err := probeDurationWithBeep(path)
+	if err == nil && duration > 0 {
+		return duration, nil
+	}
+	if !IsFFmpegAvailable() {
+		return 0, fmt.Errorf("could not determine duration and ffmpeg is not available")
+	}
+	return probeWithFFprobe(path)
+}
+
+type ffprobeOutput struct {
+	Format struct {
+		Duration string `json:"duration"`
+	} `json:"format"`
+}
+
+func probeWithFFprobe(path string) (time.Duration, error) {
+	command := exec.Command("ffprobe", "-v", "quiet", "-print_format", "json", "-show_format", path)
+	output, err := command.Output()
+	if err != nil {
+		return 0, err
+	}
+
+	var result ffprobeOutput
+	if err := json.Unmarshal(output, &result); err != nil {
+		return 0, err
+	}
+	seconds, err := strconv.ParseFloat(result.Format.Duration, 64)
+	if err != nil {
+		return 0, err
+	}
+
+	return time.Duration(seconds * float64(time.Second)), nil
 }
