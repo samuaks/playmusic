@@ -10,8 +10,8 @@ import (
 func TestLoadTracks(t *testing.T) {
 	dir := t.TempDir()
 	files := []string{"song1.mp3", "song2.wav", "document.txt"}
-	for _, file := range files {
-		os.WriteFile(filepath.Join(dir, file), []byte{}, 0644)
+	for i, file := range files {
+		os.WriteFile(filepath.Join(dir, file), []byte("content for file "+string(rune(i+97))), 0644)
 	}
 
 	tracks, err := LoadLibrary(dir)
@@ -56,5 +56,22 @@ func TestFormattedDuration(t *testing.T) {
 		if got != c.want {
 			t.Errorf("FormatDuration() = %q, want %q", got, c.want)
 		}
+	}
+}
+
+func TestLoadLibraryDeduplication(t *testing.T) {
+	dir := t.TempDir()
+
+	content := []byte("testing content")
+	os.WriteFile(filepath.Join(dir, "song1.mp3"), content, 0644)
+	os.WriteFile(filepath.Join(dir, "song2.mp3"), content, 0644)
+	os.WriteFile(filepath.Join(dir, "song3.mp3"), []byte("different content"), 0644)
+
+	tracks, err := LoadLibrary(dir)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(tracks) != 2 {
+		t.Errorf("Expected 2 unique tracks, got %d", len(tracks))
 	}
 }

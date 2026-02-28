@@ -42,17 +42,28 @@ func LoadLibrary(dir string) ([]Track, error) {
 			Filename: name,
 			Path:     filepath.Join(dir, name),
 		})
-
-		var wg sync.WaitGroup
-		for i := range tracks {
-			wg.Add(1)
-			go func(t *Track) {
-				defer wg.Done()
-				t.Duration, _ = ProbeDuration(t.Path)
-			}(&tracks[i])
-		}
-		wg.Wait()
-
 	}
-	return tracks, nil
+
+	var wg sync.WaitGroup
+	hashes := make([]string, len(tracks))
+	for i := range tracks {
+		wg.Add(1)
+		go func(idx int, t *Track) {
+			defer wg.Done()
+			t.Duration, _ = ProbeDuration(t.Path)
+			hashes[idx], _ = hashFile(t.Path)
+		}(i, &tracks[i])
+	}
+	wg.Wait()
+
+	seen := make(map[string]bool)
+	uniqueTracks := tracks[:0]
+	for i, track := range tracks {
+		if hashes[i] == "" || seen[hashes[i]] {
+			continue
+		}
+		seen[hashes[i]] = true
+		uniqueTracks = append(uniqueTracks, track)
+	}
+	return uniqueTracks, nil
 }
