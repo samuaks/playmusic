@@ -11,11 +11,11 @@ import (
 func handleInput(p *play.Player) {
 	reader := bufio.NewReader(os.Stdin)
 	for {
-		rune, _, err := reader.ReadRune()
+		input, _, err := reader.ReadRune()
 		if err != nil {
 			return
 		}
-		switch rune {
+		switch input {
 		case 'p':
 			p.Pause()
 			fmt.Println(c.Colorize("Paused", c.ColorBold+c.ColorYellow))

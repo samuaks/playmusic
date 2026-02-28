@@ -28,6 +28,8 @@ func main() {
 	}
 
 	p := &play.Player{}
+	// spawn goroutine to handle user input while songs are playing
+	// because i think this is the only reasonable way to achieve this without blocking main thread.
 	go handleInput(p)
 
 	for _, track := range tracks {
