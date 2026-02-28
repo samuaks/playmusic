@@ -56,3 +56,37 @@ Drop your media files into the `Media` directory and they will be played in orde
 ## Attribution
 Music used in demo:
 >'Shadows and Dust' by Scott Buckley – released under CC-BY 4.0. www.scottbuckley.com.au
+
+
+
+## Concurrency
+
+The player uses goroutines and channels to manage concurrent operations and user input
+
+### WaitGroup() - do many things at once and wait for them ALL to finish before continuing.
+
+Used in library package to probe all track durations concurrently, improving startup time significantly when the number of tracks is large. 
+Without this the durations would be probed sequentially, in which time would scale linearly with the number of tracks.
+
+Visual example of the concept:
+
+```
+|-main: [wg.Wait()... blocking until all done...]
+|-goroutine 1: [ProbeDuration(track1)...]
+|-goroutine 2: [ProbeDuration(track2)...]
+|-goroutine 3: [ProbeDuration(track3)...]
+```
+
+### Non-blocking user input handling with goroutines
+
+Used for input handling in main.go while tracks are playing.
+Without a goroutine, main thread could either play music OR handle user input, not both.
+
+```go
+go handleInput(player) // runs independently in the background while main thread continues to play music
+
+for _, track := range tracks {
+    player.Play(track) 
+    player.Wait() // unblocks next track when song naturally finishes OR when user presses a key to skip 
+}
+```
