@@ -91,6 +91,7 @@ func (m Model) move(direction int) Model {
 }
 
 func (m Model) Init() tea.Cmd {
+	setTerminalTitle("Playing Music 🎶")
 	return tea.Batch(m.playCurrent(), tick())
 }
 
