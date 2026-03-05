@@ -33,6 +33,7 @@ A modular command-line media player written in Go. Uses [beep](https://github.co
 | 5 | Headphone wear detection (auto-pause on removal) | Feature | Research |
 | 6 | Sample rate mismatch on some tracks | Bug | Known/Fixed |
 | 7 | CI/CD — GitHub Actions for running tests and building release executables | Feature | Planned |
+| 8 | Album / playlist support | Feature | Planned |
 
 
 ## Usage
