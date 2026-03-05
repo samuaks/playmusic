@@ -60,6 +60,10 @@ func (p *Player) Wait() {
 	}
 }
 
+func (p *Player) Done() chan struct{} {
+	return p.done
+}
+
 func (p *Player) Stop() {
 	if p.ctrl != nil {
 		speaker.Clear()
@@ -90,5 +94,13 @@ func (p *Player) Resume() {
 func (p *Player) Next() {
 	if p.done != nil {
 		p.next <- struct{}{}
+	}
+}
+
+func (p *Player) Skip() {
+	if p.done != nil {
+		p.Stop()
+		close(p.done)
+		p.done = nil
 	}
 }

@@ -2,9 +2,11 @@ package main
 
 import (
 	"fmt"
-	c "playmusic/colors"
+	"os"
 	lib "playmusic/library"
-	play "playmusic/player"
+	"playmusic/tui"
+
+	tea "github.com/charmbracelet/bubbletea"
 )
 
 func main() {
@@ -19,25 +21,35 @@ func main() {
 		return
 	}
 
-	fmt.Printf("Loaded %d tracks:\n", len(tracks))
-	for i, track := range tracks {
-		index := fmt.Sprintf("%s", "["+c.Colorize(fmt.Sprintf("%d", i+1), c.ColorBold+c.ColorCyan)+"]")
-		title := c.Colorize(track.Title, c.ColorWhite)
-		duration := fmt.Sprintf("%s", "("+c.Colorize(fmt.Sprintf("%s", track.FormatDuration()), c.ColorBold+c.ColorCyan)+")")
-		fmt.Printf(" %s %s %s\n", index, title, duration)
+	ui := tea.NewProgram(tui.NewModel(tracks), tea.WithAltScreen())
+
+	if _, err := ui.Run(); err != nil {
+		fmt.Printf("Error: %v\n", err)
+		os.Exit(1)
 	}
 
-	p := &play.Player{}
-	// spawn goroutine to handle user input while songs are playing
-	// because i think this is the only reasonable way to achieve this without blocking main thread.
-	go handleInput(p)
-
-	for _, track := range tracks {
-		fmt.Printf("\nPlaying: %s\n", track.Title)
-		if err := p.Play(track.Path); err != nil {
-			fmt.Printf("Error playing track: %v\n", err)
-		}
-		p.Wait()
-	}
-	fmt.Println("\nPlayList finished.")
 }
+
+/*
+fmt.Printf("Loaded %d tracks:\n", len(tracks))
+for i, track := range tracks {
+	index := fmt.Sprintf("%s", "["+c.Colorize(fmt.Sprintf("%d", i+1), c.ColorBold+c.ColorCyan)+"]")
+	title := c.Colorize(track.Title, c.ColorWhite)
+	duration := fmt.Sprintf("%s", "("+c.Colorize(fmt.Sprintf("%s", track.FormatDuration()), c.ColorBold+c.ColorCyan)+")")
+	fmt.Printf(" %s %s %s\n", index, title, duration)
+}
+
+p := &play.Player{}
+// spawn goroutine to handle user input while songs are playing
+// because i think this is the only reasonable way to achieve this without blocking main thread.
+go handleInput(p)
+
+for _, track := range tracks {
+	fmt.Printf("\nPlaying: %s\n", track.Title)
+	if err := p.Play(track.Path); err != nil {
+		fmt.Printf("Error playing track: %v\n", err)
+	}
+	p.Wait()
+}
+fmt.Println("\nPlayList finished.")
+*/
