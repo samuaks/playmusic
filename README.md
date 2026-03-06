@@ -28,7 +28,7 @@ A modular command-line media player written in Go. Uses [beep](https://github.co
 |---|-------------|------|--------|
 | 1 | Bubble Tea TUI implementation | Feature | Partial |
 | 2 | Pause / Resume / Next track support | Feature | Done |
-| 3 | Volume control | Feature | Planned |
+| 3 | Volume control | Feature | Not Planned |
 | 4 | Custom media directory / system-wide media scanning | Feature | Planned |
 | 5 | Headphone wear detection (auto-pause on removal) | Feature | Research |
 | 6 | Sample rate mismatch on some tracks | Bug | Known/Fixed |
