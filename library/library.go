@@ -1,6 +1,8 @@
 package library
 
 import (
+	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	. "playmusic/decoder"
@@ -22,26 +24,87 @@ func (t Track) FormatDuration() string {
 }
 
 func LoadLibrary(dir string) ([]Track, error) {
+	return loadFromDir(dir)
+}
+
+func LoadLibraries(dirs ...string) ([]Track, error) {
 	var tracks []Track
-
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, entry := range entries {
-		if entry.IsDir() || !IsSupported(entry.Name()) {
+	for _, dir := range dirs {
+		if strings.TrimSpace(dir) == "" {
 			continue
 		}
-		name := entry.Name()
+		scanned, err := loadFromDir(dir)
+		if err != nil {
+			if os.IsNotExist(err) {
+				continue
+			}
+			return nil, err
+		}
+		tracks = append(tracks, scanned...)
+	}
+	if len(tracks) == 0 {
+		return nil, nil
+	}
+	return enrichAndDeduplicate(tracks), nil
+}
+
+func DefaultLibraryDirs() []string {
+	dirs := []string{
+		filepath.Clean("Media"),
+	}
+
+	home, err := os.UserHomeDir()
+	if err == nil && strings.TrimSpace(home) != "" {
+		dirs = append(dirs, filepath.Join(home, "Music"))
+	}
+
+	return uniqueDirs(dirs)
+}
+
+func LoadDefaultLibrary() ([]Track, error) {
+	return LoadLibraries(DefaultLibraryDirs()...)
+}
+
+func loadFromDir(dir string) ([]Track, error) {
+	var tracks []Track
+
+	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		if d.IsDir() || !IsSupported(d.Name()) {
+			return nil
+		}
+		name := d.Name()
 
 		tracks = append(tracks, Track{
 			Title:    strings.TrimSuffix(name, filepath.Ext(name)),
 			Filename: name,
-			Path:     filepath.Join(dir, name),
+			Path:     path,
 		})
+		return nil
+	})
+	if err != nil {
+		return nil, err
 	}
+	return enrichAndDeduplicate(tracks), nil
+}
 
+func uniqueDirs(dirs []string) []string {
+	seen := make(map[string]bool)
+	uniq := make([]string, 0, len(dirs))
+	for _, dir := range dirs {
+		cleaned := filepath.Clean(dir)
+		if cleaned == "." || seen[cleaned] {
+			continue
+		}
+		seen[cleaned] = true
+		uniq = append(uniq, cleaned)
+	}
+	return uniq
+}
+
+func enrichAndDeduplicate(tracks []Track) []Track {
 	var wg sync.WaitGroup
 	hashes := make([]string, len(tracks))
 	for i := range tracks {
@@ -63,5 +126,5 @@ func LoadLibrary(dir string) ([]Track, error) {
 		seen[hashes[i]] = true
 		uniqueTracks = append(uniqueTracks, track)
 	}
-	return uniqueTracks, nil
+	return uniqueTracks
 }

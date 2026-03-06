@@ -75,3 +75,53 @@ func TestLoadLibraryDeduplication(t *testing.T) {
 		t.Errorf("Expected 2 unique tracks, got %d", len(tracks))
 	}
 }
+
+func TestLoadLibraryRecursive(t *testing.T) {
+	root := t.TempDir()
+	nested := filepath.Join(root, "nested", "deeper")
+	if err := os.MkdirAll(nested, 0755); err != nil {
+		t.Fatalf("failed to create nested dirs: %v", err)
+	}
+
+	if err := os.WriteFile(filepath.Join(nested, "song.mp3"), []byte("recursive"), 0644); err != nil {
+		t.Fatalf("failed to write track: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "notes.txt"), []byte("skip"), 0644); err != nil {
+		t.Fatalf("failed to write file: %v", err)
+	}
+
+	tracks, err := LoadLibrary(root)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(tracks) != 1 {
+		t.Fatalf("expected 1 recursive track, got %d", len(tracks))
+	}
+	if tracks[0].Filename != "song.mp3" {
+		t.Fatalf("expected song.mp3, got %s", tracks[0].Filename)
+	}
+}
+
+func TestLoadLibrariesSkipsMissingAndDeduplicatesAcrossDirs(t *testing.T) {
+	dir1 := t.TempDir()
+	dir2 := t.TempDir()
+	same := []byte("same-content")
+
+	if err := os.WriteFile(filepath.Join(dir1, "same.mp3"), same, 0644); err != nil {
+		t.Fatalf("failed to write dir1 track: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir2, "same.mp3"), same, 0644); err != nil {
+		t.Fatalf("failed to write dir2 track: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir2, "unique.mp3"), []byte("unique"), 0644); err != nil {
+		t.Fatalf("failed to write unique track: %v", err)
+	}
+
+	tracks, err := LoadLibraries(filepath.Join(dir1, "missing"), dir1, dir2)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(tracks) != 2 {
+		t.Fatalf("expected 2 unique tracks, got %d", len(tracks))
+	}
+}

@@ -10,14 +10,14 @@ import (
 )
 
 func main() {
-	tracks, err := lib.LoadLibrary("Media")
+	tracks, err := lib.LoadDefaultLibrary()
 	if err != nil {
 		fmt.Printf("Error loading library: %v\n", err)
 		return
 	}
 
 	if len(tracks) == 0 {
-		fmt.Println("No tracks found in Media/")
+		fmt.Println("No tracks found in Media/ or default Music folder")
 		return
 	}
 
