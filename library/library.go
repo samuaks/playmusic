@@ -1,10 +1,10 @@
 package library
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	. "playmusic/decoder"
+	. "playmusic/helpers"
 	"strings"
 	"sync"
 	"time"
@@ -18,9 +18,7 @@ type Track struct {
 }
 
 func (t Track) FormatDuration() string {
-	minutes := int(t.Duration.Minutes())
-	seconds := int(t.Duration.Seconds()) % 60
-	return fmt.Sprintf("%d:%02d", minutes, seconds)
+	return FormattedDuration(t.Duration)
 }
 
 func LoadLibrary(dir string) ([]Track, error) {
