@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	. "playmusic/helpers"
 	. "playmusic/library"
 	. "playmusic/player"
 	"time"
@@ -181,17 +182,11 @@ func (m Model) View() string {
 	}
 
 	playing := currentStyle.Render(fmt.Sprintf("%s %s", status, track.Title))
-	elapsed := dimmedStyle.Render(fmt.Sprintf("%s / %s", FormatDuration(m.elapsed), track.FormatDuration()))
+	elapsed := dimmedStyle.Render(fmt.Sprintf("%s / %s", FormattedDuration(m.elapsed), track.FormatDuration()))
 	help := dimmedStyle.Render("space pause/resume • ←/→ prev/next • enter play • q quit")
 	progressBar := barStyle.Width(m.width - 2).Render(
 		fmt.Sprintf("%s\n%s\n%s\n%s", playing, elapsed, m.progress.ViewAs(percent), help))
 
 	return fmt.Sprintf("%s\n%s", m.list.View(), progressBar)
 
-}
-
-func FormatDuration(d time.Duration) string {
-	minutes := int(d.Minutes())
-	seconds := int(d.Seconds()) % 60
-	return fmt.Sprintf("%d:%02d", minutes, seconds)
 }
