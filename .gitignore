@@ -1,3 +1,6 @@
 /Media/*
 !ShadowsAndDust.mp3
+/Mock/*
+!RitesOfPassage.mp3
 playmusic.exe
+ignorethis.txt

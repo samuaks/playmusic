@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	lib "playmusic/library"
+	"playmusic/search"
 	"playmusic/tui"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -21,7 +22,10 @@ func main() {
 		return
 	}
 
-	ui := tea.NewProgram(tui.NewModel(tracks), tea.WithAltScreen())
+	searcher := search.New(search.MockSource{})
+
+	ui := tea.NewProgram(
+		tui.NewModel(tracks, searcher), tea.WithAltScreen())
 
 	if _, err := ui.Run(); err != nil {
 		fmt.Printf("Error: %v\n", err)
