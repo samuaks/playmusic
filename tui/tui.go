@@ -3,7 +3,6 @@ package tui
 import (
 	"fmt"
 	. "playmusic/helpers"
-	"playmusic/library"
 	. "playmusic/library"
 	. "playmusic/player"
 	"time"
@@ -80,17 +79,17 @@ func (m Model) playCurrent() tea.Cmd {
 	}
 }
 
-func (m Model) selectedTrack() (library.Track, int, bool) {
+func (m Model) selectedTrack() (Track, int, bool) {
 	item, ok := m.list.SelectedItem().(trackItem)
 	if !ok {
-		return library.Track{}, 0, false
+		return Track{}, 0, false
 	}
 	for i, t := range m.tracks {
 		if t.Path == item.track.Path {
 			return t, i, true
 		}
 	}
-	return library.Track{}, 0, false
+	return Track{}, 0, false
 }
 
 func (m Model) filterQuery() string {
