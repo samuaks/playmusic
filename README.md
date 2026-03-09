@@ -55,7 +55,7 @@ Drop your media files into the `Media` directory and they will be played in orde
 ## Requirements
 
 - Go 1.21 or later
-- FFmpeg (optional) — install and add to PATH for extended format support
+- FFmpeg (optional) — install and add to PATH for extended format support. For Windows all can be done by running command: winget install ffmpeg. 
 
 ## Attribution
 Music used in demo:
