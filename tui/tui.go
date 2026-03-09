@@ -45,17 +45,17 @@ func NewModel(tracks []Track) Model {
 	delegate.Styles.SelectedTitle = selectedTitleStyle
 	delegate.Styles.SelectedDesc = selectedDescStyle
 
-	songs := list.New(items, delegate, 0, 0)
-	songs.Title = "PlayMusic"
-	songs.SetShowStatusBar(false)
-	songs.SetShowHelp(true)
-	songs.SetFilteringEnabled(true)
-	songs.Styles.Title = titleStyle
+	newList := list.New(items, delegate, 0, 0)
+	newList.Title = "PlayMusic"
+	newList.SetShowStatusBar(false)
+	newList.SetShowHelp(true)
+	newList.SetFilteringEnabled(true)
+	newList.Styles.Title = titleStyle
 
 	return Model{
 		tracks:   tracks,
 		player:   &Player{},
-		list:     songs,
+		list:     newList,
 		progress: progress.New(progress.WithDefaultGradient()),
 	}
 
