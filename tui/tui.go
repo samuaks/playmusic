@@ -3,6 +3,7 @@ package tui
 import (
 	"fmt"
 	. "playmusic/helpers"
+	"playmusic/library"
 	. "playmusic/library"
 	. "playmusic/player"
 	"time"
@@ -48,8 +49,8 @@ func NewModel(tracks []Track) Model {
 	songs := list.New(items, delegate, 0, 0)
 	songs.Title = "PlayMusic"
 	songs.SetShowStatusBar(false)
-	songs.SetShowHelp(false)
-	songs.SetFilteringEnabled(false)
+	songs.SetShowHelp(true)
+	songs.SetFilteringEnabled(true)
 	songs.Styles.Title = titleStyle
 
 	return Model{
@@ -79,15 +80,42 @@ func (m Model) playCurrent() tea.Cmd {
 	}
 }
 
+func (m Model) selectedTrack() (library.Track, int, bool) {
+	item, ok := m.list.SelectedItem().(trackItem)
+	if !ok {
+		return library.Track{}, 0, false
+	}
+	for i, t := range m.tracks {
+		if t.Path == item.track.Path {
+			return t, i, true
+		}
+	}
+	return library.Track{}, 0, false
+}
+
+func (m Model) filterQuery() string {
+	return m.list.FilterValue()
+}
+
 func (m Model) move(direction int) Model {
 	if len(m.tracks) == 0 {
 		return m
 	}
-	m.player.Stop()
 	m.elapsed = 0
 	m.paused = false
-	m.current = (m.current + direction + len(m.tracks)) % len(m.tracks)
-	m.list.Select(m.current)
+	if m.list.FilterState() == list.FilterApplied {
+		if direction > 0 {
+			m.list.CursorDown()
+		} else {
+			m.list.CursorUp()
+		}
+		if _, idx, ok := m.selectedTrack(); ok {
+			m.current = idx
+		}
+	} else {
+		m.current = (m.current + direction + len(m.tracks)) % len(m.tracks)
+		m.list.Select(m.current)
+	}
 	return m
 }
 
@@ -106,8 +134,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.progress.Width = msg.Width - 6
 
 	case tea.KeyMsg:
+		if m.list.FilterState() == list.Filtering {
+			break
+		}
 		switch msg.String() {
-		case "q", "ctrl+c", "esc":
+		case "ctrl+q", "ctrl+c":
 			m.player.Stop()
 			return m, tea.Quit
 		case " ":
@@ -119,27 +150,24 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.paused = true
 			}
 			return m, nil
-		case "p", "left":
-			m = m.move(-1)
-			m.player.Next()
-			return m, m.playCurrent()
 		case "n", "right":
 			m = m.move(1)
 			m.player.Next()
 			return m, m.playCurrent()
 
+		case "p", "left":
+			m = m.move(-1)
+			m.player.Next()
+			return m, m.playCurrent()
+
 		case "enter":
-			selected := m.list.Index()
-			if selected != m.current {
-				m.player.Stop()
+			if _, idx, ok := m.selectedTrack(); ok && idx != m.current {
 				m.elapsed = 0
 				m.paused = false
-				m.current = selected
-				m.list.Select(m.current)
+				m.current = idx
+				m.player.Next()
 				return m, m.playCurrent()
 			}
-			return m, nil
-
 		}
 	case tickMsg:
 		if !m.paused {
@@ -183,7 +211,7 @@ func (m Model) View() string {
 
 	playing := currentStyle.Render(fmt.Sprintf("%s %s", status, track.Title))
 	elapsed := dimmedStyle.Render(fmt.Sprintf("%s / %s", FormattedDuration(m.elapsed), track.FormatDuration()))
-	help := dimmedStyle.Render("space pause/resume • ←/→ prev/next • enter play • q quit")
+	help := dimmedStyle.Render("space pause/resume • enter play")
 	progressBar := barStyle.Width(m.width - 2).Render(
 		fmt.Sprintf("%s\n%s\n%s\n%s", playing, elapsed, m.progress.ViewAs(percent), help))
 
