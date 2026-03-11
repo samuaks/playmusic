@@ -58,14 +58,11 @@ func NewModel(tracks []Track, searcher *search.Searcher) Model {
 		items[i] = trackItem{t}
 	}
 
-	delegate := list.NewDefaultDelegate()
-	delegate.Styles.SelectedTitle = selectedTitleStyle
-	delegate.Styles.SelectedDesc = selectedDescStyle
+	newList := list.New(items, newDelegate(""), 0, 0)
 
-	newList := list.New(items, delegate, 0, 0)
 	newList.Title = TITLE
 	newList.SetShowStatusBar(false)
-	newList.SetShowHelp(false)
+	newList.SetShowHelp(true)
 	newList.SetFilteringEnabled(true)
 	newList.Styles.Title = titleStyle
 
@@ -74,6 +71,8 @@ func NewModel(tracks []Track, searcher *search.Searcher) Model {
 	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("86"))
 
 	return Model{
+		// doesnt pre-select any track
+		current:  -1,
 		tracks:   tracks,
 		player:   &Player{},
 		list:     newList,
@@ -140,6 +139,7 @@ func (m Model) move(direction int) Model {
 	if len(m.tracks) == 0 {
 		return m
 	}
+
 	m.elapsed = 0
 	m.paused = false
 	if m.list.FilterState() == list.FilterApplied {
@@ -150,9 +150,12 @@ func (m Model) move(direction int) Model {
 		}
 		if _, idx, ok := m.selectedTrack(); ok {
 			m.current = idx
+			m.list.SetDelegate(newDelegate(m.tracks[m.current].Path))
+
 		}
 	} else {
 		m.current = (m.current + direction + len(m.tracks)) % len(m.tracks)
+		m.list.SetDelegate(newDelegate(m.tracks[m.current].Path))
 		m.list.Select(m.current)
 	}
 	return m
@@ -206,6 +209,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.elapsed = 0
 				m.paused = false
 				m.current = idx
+				m.list.SetDelegate(newDelegate(m.tracks[m.current].Path))
 				m.player.Next()
 				return m, m.playCurrent()
 			}
@@ -219,6 +223,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.elapsed = 0
 		m.paused = false
 		m.current = (m.current + 1) % len(m.tracks)
+		m.list.SetDelegate(newDelegate(m.tracks[m.current].Path))
 		m.list.Select(m.current)
 		return m, m.playCurrent()
 
@@ -258,19 +263,29 @@ func (m Model) View() string {
 		return "No tracks\n"
 	}
 
-	track := m.tracks[m.current]
-
+	nowPlaying := ""
+	elapsed := ""
 	var percent float64
-	if track.Duration > 0 {
-		percent = float64(m.elapsed) / float64(track.Duration)
-		if percent > 1 {
-			percent = 1
-		}
-	}
 
-	status := "▶"
-	if m.paused {
-		status = "⏸"
+	if m.current == -1 {
+		nowPlaying = dimmedStyle.Render("No track selected")
+		elapsed = dimmedStyle.Render("0:00 / 0:00")
+	} else {
+		track := m.tracks[m.current]
+		if track.Duration > 0 {
+			percent = float64(m.elapsed) / float64(track.Duration)
+			if percent > 1 {
+				percent = 1
+			}
+		}
+
+		status := "▶"
+		if m.paused {
+			status = "⏸"
+		}
+
+		nowPlaying = currentStyle.Render(fmt.Sprintf("%s %s", status, track.Title))
+		elapsed = dimmedStyle.Render(fmt.Sprintf("%s / %s", FormattedDuration(m.elapsed), track.FormatDuration()))
 	}
 	searchBar := ""
 	if m.searching {
@@ -280,11 +295,9 @@ func (m Model) View() string {
 			Render(m.spinner.View() + " searching external sources...")
 		searchBar += "\n"
 	}
-	playing := currentStyle.Render(fmt.Sprintf("%s %s", status, track.Title))
-	elapsed := dimmedStyle.Render(fmt.Sprintf("%s / %s", FormattedDuration(m.elapsed), track.FormatDuration()))
 	help := dimmedStyle.Render("space pause/resume • enter play")
 	progressBar := barStyle.Width(m.width - 2).Render(
-		fmt.Sprintf("%s\n%s\n%s\n%s", playing, elapsed, m.progress.ViewAs(percent), help))
+		fmt.Sprintf("%s\n%s\n%s\n%s", nowPlaying, elapsed, m.progress.ViewAs(percent), help))
 
 	return m.list.View() + "\n" + searchBar + progressBar
 
