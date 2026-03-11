@@ -23,6 +23,7 @@ type Metadata struct {
 }
 
 // GetMetadata is used in library.loadFromDir() func after we have checked that format is suitable for fetching the data
+// Sidenote: this function should probably be in Library module since it is only used there?
 func GetMetadata(path string) (Metadata, error) {
 	file, err := os.Open(path)
 	if err != nil {
