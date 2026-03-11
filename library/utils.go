@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 )
 
@@ -32,4 +33,12 @@ func formatTrackName(artist, title, filename string) string {
 		return title
 	}
 	return artist + " - " + title
+}
+
+// initial ascending alphabetical Trackname at the moment
+func sortingOfTracks(tracks []Track) []Track {
+	sort.SliceStable(tracks, func(i, j int) bool {
+		return tracks[i].Trackname < tracks[j].Trackname
+	})
+	return tracks
 }
