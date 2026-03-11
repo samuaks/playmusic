@@ -159,7 +159,8 @@ func (m Model) move(direction int) Model {
 
 func (m Model) Init() tea.Cmd {
 	setTerminalTitle("Playing Music 🎶")
-	return tea.Batch(m.playCurrent(), tick())
+	//return tea.Batch(m.playCurrent(), tick())
+	return tick()
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -209,7 +210,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 	case tickMsg:
-		if !m.paused {
+		if !m.paused && m.player.IsPlaying() {
 			m.elapsed += 500 * time.Millisecond
 		}
 		return m, tick()

@@ -104,3 +104,7 @@ func (p *Player) Skip() {
 		p.done = nil
 	}
 }
+
+func (p *Player) IsPlaying() bool {
+	return p.ctrl != nil
+}
