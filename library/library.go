@@ -12,10 +12,15 @@ import (
 )
 
 type Track struct {
-	Title    string
-	Path     string
-	Filename string
-	Duration time.Duration
+	Trackname string
+	Artist    string
+	Title     string
+	Path      string
+	Filename  string
+	Duration  time.Duration
+	Album     string
+	Year      int
+	Genre     string
 }
 
 func (t Track) FormatDuration() string {
@@ -76,10 +81,16 @@ func loadFromDir(dir string) ([]Track, error) {
 		}
 		name := d.Name()
 
+		metadata, _ := GetMetadata(path)
+
 		tracks = append(tracks, Track{
-			Title:    strings.TrimSuffix(name, filepath.Ext(name)),
-			Filename: name,
-			Path:     path,
+			Trackname: formatTrackName(metadata.Artist, metadata.Title, name),
+			Title:     metadata.Title,
+			Artist:    metadata.Artist,
+			Filename:  name,
+			Path:      path,
+			Year:      metadata.Year,
+			Genre:     metadata.Genre,
 		})
 		return nil
 	})
