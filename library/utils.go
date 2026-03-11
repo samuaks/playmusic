@@ -35,9 +35,9 @@ func formatTrackName(artist, title, filename string) string {
 	return artist + " - " + title
 }
 
-// ascending alphabetical Trackname at the moment
+// initial ascending alphabetical Trackname at the moment
 func sortingOfTracks(tracks []Track) []Track {
-	sort.Slice(tracks, func(i, j int) bool {
+	sort.SliceStable(tracks, func(i, j int) bool {
 		return tracks[i].Trackname < tracks[j].Trackname
 	})
 	return tracks
