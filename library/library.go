@@ -83,15 +83,8 @@ func loadFromDir(dir string) ([]Track, error) {
 
 		metadata, _ := GetMetadata(path)
 
-		var trackName string
-		if metadata.Artist == "" || metadata.Title == "" {
-			trackName = strings.TrimSuffix(name, filepath.Ext(name))
-		} else {
-			trackName = metadata.Artist + " - " + metadata.Title
-		}
-
 		tracks = append(tracks, Track{
-			Trackname: trackName,
+			Trackname: formatTrackName(metadata.Artist, metadata.Title, name),
 			Title:     metadata.Title,
 			Artist:    metadata.Artist,
 			Filename:  name,

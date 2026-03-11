@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
+	"strings"
 )
 
 func hashFile(path string) (string, error) {
@@ -20,4 +22,14 @@ func hashFile(path string) (string, error) {
 		return "", err
 	}
 	return fmt.Sprintf("%x", hash.Sum(nil)), nil
+}
+
+func formatTrackName(artist, title, filename string) string {
+	if artist == "" || title == "" {
+		return strings.TrimSuffix(filename, filepath.Ext(filename))
+	}
+	if strings.Contains(strings.ToLower(title), strings.ToLower(artist)) {
+		return title
+	}
+	return artist + " - " + title
 }
