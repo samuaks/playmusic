@@ -49,7 +49,7 @@ func LoadLibraries(dirs ...string) ([]Track, error) {
 	if len(tracks) == 0 {
 		return nil, nil
 	}
-	return enrichAndDeduplicate(tracks), nil
+	return sortingOfTracks(enrichAndDeduplicate(tracks)), nil
 }
 
 func DefaultLibraryDirs() []string {
