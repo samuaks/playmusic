@@ -31,7 +31,8 @@ func debounceSearch(query string) tea.Cmd {
 	})
 }
 
-func (t trackItem) Title() string       { return t.track.Title }
+func (t trackItem) Title() string { return t.track.Trackname } // u can use some of the additional metadata for the UI
+
 func (t trackItem) Description() string { return t.track.FormatDuration() }
 func (t trackItem) FilterValue() string { return t.track.Title }
 
