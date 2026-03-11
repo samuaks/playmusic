@@ -60,6 +60,7 @@ Drop your media files into the `Media` directory and they will be played in orde
 ## Attribution
 Music used in demo:
 >'Shadows and Dust' by Scott Buckley – released under CC-BY 4.0. www.scottbuckley.com.au
+>'Rites of passage' by Scott Buckley – released under CC-BY 4.0. www.scottbuckley.com.au
 
 
 
