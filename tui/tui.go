@@ -6,6 +6,7 @@ import (
 	. "playmusic/player"
 	"playmusic/search"
 	"time"
+	"unicode"
 
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/progress"
@@ -62,11 +63,13 @@ func NewModel(tracks []Track, searcher *search.Searcher) Model {
 		items[i] = trackItem{t}
 	}
 
-	newList := list.New(items, newDelegate(""), 0, 0)
+	newList := list.New(items, newDelegate("", ""), 0, 0)
 
 	newList.SetShowStatusBar(false)
 	newList.SetShowTitle(false)
 	newList.SetShowHelp(false)
+
+	newList.Styles.NoItems = emptyStyle
 
 	s := spinner.New()
 	s.Spinner = spinner.Dot
@@ -144,12 +147,12 @@ func (m Model) move(direction int) Model {
 		}
 		if _, idx, ok := m.selectedTrack(); ok {
 			m.current = idx
-			m.list.SetDelegate(newDelegate(m.tracks[m.current].Path))
+			m.list.SetDelegate(newDelegate(m.tracks[m.current].Path, m.searchQuery))
 
 		}
 	} else {
 		m.current = (m.current + direction + len(m.tracks)) % len(m.tracks)
-		m.list.SetDelegate(newDelegate(m.tracks[m.current].Path))
+		m.list.SetDelegate(newDelegate(m.tracks[m.current].Path, m.searchQuery))
 		m.list.Select(m.current)
 	}
 	return m
@@ -177,6 +180,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		case "esc":
 			m.searchQuery = ""
+			m.updateListItems()
 			return m, debounceSearch("")
 		case " ":
 			if m.paused {
@@ -203,20 +207,25 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.elapsed = 0
 				m.paused = false
 				m.current = idx
-				m.list.SetDelegate(newDelegate(m.tracks[m.current].Path))
+				m.list.SetDelegate(newDelegate(m.tracks[m.current].Path, m.searchQuery))
 				m.player.Next()
 				return m, m.playCurrent()
 			}
 		case "backspace":
 			if len(m.searchQuery) > 0 {
 				m.searchQuery = m.searchQuery[:len(m.searchQuery)-1]
+				m.updateListItems()
 				return m, debounceSearch(m.searchQuery)
 			}
 			return m, nil
 		default:
-			if len(msg.String()) == 1 {
-				m.searchQuery += msg.String()
-				return m, debounceSearch(m.searchQuery)
+			if len(msg.String()) == 1 && msg.String() != " " {
+				r := rune(msg.String()[0])
+				if unicode.IsLetter(r) || unicode.IsNumber(r) || unicode.IsPunct(r) {
+					m.searchQuery += msg.String()
+					m.updateListItems()
+					return m, debounceSearch(m.searchQuery)
+				}
 			}
 		}
 	case tickMsg:
@@ -227,8 +236,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case trackDoneMsg:
 		m.elapsed = 0
 		m.paused = false
-		m.current = (m.current + 1) % len(m.tracks)
-		m.list.SetDelegate(newDelegate(m.tracks[m.current].Path))
+		m.current = m.findNext()
+		m.list.SetDelegate(newDelegate(m.tracks[m.current].Path, m.searchQuery))
 		m.list.Select(m.current)
 		return m, m.playCurrent()
 
@@ -266,9 +275,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) View() string {
-	if len(m.tracks) == 0 {
-		return "No tracks\n"
-	}
-	return fmt.Sprintf("%s\n%s\n%s", m.searchBarView(), m.list.View(), m.playerBarView())
+	return fmt.Sprintf("%s\n%s\n%s",
+		m.searchBarView(),
+		m.list.View(),
+		m.playerBarView())
 
 }
