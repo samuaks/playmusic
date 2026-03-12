@@ -11,7 +11,7 @@ import (
 	"google.golang.org/api/youtube/v3"
 )
 
-func TestLoadTracks(t *testing.T) {
+func TestReturnsIdAndTitle(t *testing.T) {
 	initiateYTClientForTest()
 
 	ytVideoId, title, err := getVideoURLFromYt("sleep token chokehold")
