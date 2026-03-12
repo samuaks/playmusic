@@ -2,7 +2,6 @@ package tui
 
 import (
 	"fmt"
-	. "playmusic/helpers"
 	. "playmusic/library"
 	. "playmusic/player"
 	"playmusic/search"
@@ -24,6 +23,10 @@ type trackItem struct {
 type searchDebounceMsg struct {
 	query string
 }
+type newTrackMsg struct {
+	track Track
+}
+type searchDoneMsg struct{}
 
 func debounceSearch(query string) tea.Cmd {
 	return tea.Tick(500*time.Millisecond, func(t time.Time) tea.Msg {
@@ -37,18 +40,19 @@ func (t trackItem) Description() string { return t.track.FormatDuration() }
 func (t trackItem) FilterValue() string { return t.track.Trackname }
 
 type Model struct {
-	tracks    []Track
-	current   int
-	elapsed   time.Duration
-	paused    bool
-	player    *Player
-	list      list.Model
-	progress  progress.Model
-	width     int
-	height    int
-	searcher  *search.Searcher
-	spinner   spinner.Model
-	searching bool
+	tracks      []Track
+	current     int
+	elapsed     time.Duration
+	paused      bool
+	player      *Player
+	list        list.Model
+	progress    progress.Model
+	width       int
+	height      int
+	searcher    *search.Searcher
+	spinner     spinner.Model
+	searching   bool
+	searchQuery string
 }
 
 func NewModel(tracks []Track, searcher *search.Searcher) Model {
@@ -60,11 +64,9 @@ func NewModel(tracks []Track, searcher *search.Searcher) Model {
 
 	newList := list.New(items, newDelegate(""), 0, 0)
 
-	newList.Title = TITLE
 	newList.SetShowStatusBar(false)
-	newList.SetShowHelp(true)
-	newList.SetFilteringEnabled(true)
-	newList.Styles.Title = titleStyle
+	newList.SetShowTitle(false)
+	newList.SetShowHelp(false)
 
 	s := spinner.New()
 	s.Spinner = spinner.Dot
@@ -114,24 +116,16 @@ func (m Model) selectedTrack() (Track, int, bool) {
 	return Track{}, 0, false
 }
 
-func (m Model) filterQuery() string {
-	return m.list.FilterValue()
-}
-
-type newTrackMsg struct {
-	track Track
-}
-
 func (m Model) runSearch(query string) tea.Cmd {
 	return func() tea.Msg {
 		tracks, err := m.searcher.Search(query)
 		if err != nil || len(tracks) == 0 {
-			return nil
+			return searchDoneMsg{}
 		}
 		for _, t := range tracks {
 			return newTrackMsg{t}
 		}
-		return nil
+		return searchDoneMsg{}
 	}
 }
 
@@ -174,17 +168,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.width = msg.Width
 		m.height = msg.Height
 		m.progress.Width = msg.Width - 6
-		m.list.SetSize(msg.Width, msg.Height-playerBarHeight)
+		m.list.SetSize(msg.Width, msg.Height-playerBarHeight-searchBarHeight)
 
 	case tea.KeyMsg:
-		if m.list.FilterState() == list.Filtering {
-			m.list, cmd = m.list.Update(msg)
-			return m, tea.Batch(cmd, debounceSearch(m.filterQuery()))
-		}
 		switch msg.String() {
 		case "ctrl+q", "ctrl+c":
 			m.player.Stop()
 			return m, tea.Quit
+		case "esc":
+			m.searchQuery = ""
+			return m, debounceSearch("")
 		case " ":
 			if m.paused {
 				m.player.Resume()
@@ -194,16 +187,17 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.paused = true
 			}
 			return m, nil
-		case "n", "right":
-			m = m.move(1)
-			m.player.Next()
-			return m, m.playCurrent()
+			/*
+				case "n", "right":
+					m = m.move(1)
+					m.player.Next()
+					return m, m.playCurrent()
 
-		case "p", "left":
-			m = m.move(-1)
-			m.player.Next()
-			return m, m.playCurrent()
-
+				case "p", "left":
+					m = m.move(-1)
+					m.player.Next()
+					return m, m.playCurrent()
+			*/
 		case "enter":
 			if _, idx, ok := m.selectedTrack(); ok && idx != m.current {
 				m.elapsed = 0
@@ -212,6 +206,17 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.list.SetDelegate(newDelegate(m.tracks[m.current].Path))
 				m.player.Next()
 				return m, m.playCurrent()
+			}
+		case "backspace":
+			if len(m.searchQuery) > 0 {
+				m.searchQuery = m.searchQuery[:len(m.searchQuery)-1]
+				return m, debounceSearch(m.searchQuery)
+			}
+			return m, nil
+		default:
+			if len(msg.String()) == 1 {
+				m.searchQuery += msg.String()
+				return m, debounceSearch(m.searchQuery)
 			}
 		}
 	case tickMsg:
@@ -233,7 +238,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, cmd
 		}
 	case searchDebounceMsg:
-		if msg.query == m.filterQuery() && msg.query != "" {
+		if msg.query == m.searchQuery && msg.query != "" {
 			m.searching = true
 			m.list.SetSize(m.width, m.height-playerBarHeight-searchBarHeight)
 
@@ -241,7 +246,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	case newTrackMsg:
 		m.searching = false
-		m.list.SetSize(m.width, m.height-playerBarHeight)
+		m.list.SetSize(m.width, m.height-playerBarHeight-searchBarHeight)
 		for _, t := range m.tracks {
 			if t.Path == msg.track.Path {
 				return m, nil
@@ -250,7 +255,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.tracks = append(m.tracks, msg.track)
 		cmd = m.list.InsertItem(len(m.tracks)-1, trackItem{msg.track})
 		return m, cmd
-
+	case searchDoneMsg:
+		m.searching = false
+		m.list.SetSize(m.width, m.height-playerBarHeight-searchBarHeight)
 	}
 
 	m.list, cmd = m.list.Update(msg)
@@ -262,43 +269,6 @@ func (m Model) View() string {
 	if len(m.tracks) == 0 {
 		return "No tracks\n"
 	}
-
-	nowPlaying := ""
-	elapsed := ""
-	var percent float64
-
-	if m.current == -1 {
-		nowPlaying = dimmedStyle.Render("No track selected")
-		elapsed = dimmedStyle.Render("0:00 / 0:00")
-	} else {
-		track := m.tracks[m.current]
-		if track.Duration > 0 {
-			percent = float64(m.elapsed) / float64(track.Duration)
-			if percent > 1 {
-				percent = 1
-			}
-		}
-
-		status := "▶"
-		if m.paused {
-			status = "⏸"
-		}
-
-		nowPlaying = currentStyle.Render(fmt.Sprintf("%s %s", status, track.Title))
-		elapsed = dimmedStyle.Render(fmt.Sprintf("%s / %s", FormattedDuration(m.elapsed), track.FormatDuration()))
-	}
-	searchBar := ""
-	if m.searching {
-		searchBar = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("86")).
-			Padding(0, 2).
-			Render(m.spinner.View() + " searching external sources...")
-		searchBar += "\n"
-	}
-	help := dimmedStyle.Render("space pause/resume • enter play")
-	progressBar := barStyle.Width(m.width - 2).Render(
-		fmt.Sprintf("%s\n%s\n%s\n%s", nowPlaying, elapsed, m.progress.ViewAs(percent), help))
-
-	return m.list.View() + "\n" + searchBar + progressBar
+	return fmt.Sprintf("%s\n%s\n%s", m.searchBarView(), m.list.View(), m.playerBarView())
 
 }
