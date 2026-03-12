@@ -2,15 +2,23 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
 	lib "playmusic/library"
 	"playmusic/search"
 	"playmusic/tui"
 
 	tea "github.com/charmbracelet/bubbletea"
+
+	"github.com/joho/godotenv"
 )
 
 func main() {
+	err := godotenv.Load() //loading .env for global vaiables
+	if err != nil {
+		log.Fatal("Can't load secrets from .env")
+	}
+
 	tracks, err := lib.LoadDefaultLibrary()
 	if err != nil {
 		fmt.Printf("Error loading library: %v\n", err)
