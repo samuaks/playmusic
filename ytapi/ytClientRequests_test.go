@@ -14,9 +14,9 @@ import (
 func TestLoadTracks(t *testing.T) {
 	initiateYTClientForTest()
 
-	ytVideoId, title, err := getVideoIdFromYt("sleep token chokehold")
+	ytVideoId, title, err := getVideoURLFromYt("sleep token chokehold")
 	if err != nil {
-		t.Fatal("error occurred while fetching video ID:", err)
+		t.Fatal("error occurred while fetching video URL:", err)
 	}
 
 	if ytVideoId == "" {

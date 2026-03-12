@@ -11,7 +11,7 @@ import (
 
 var ytClient *youtube.Service //initializing client that will be used for all requests to youtube API
 
-func initiateYTClient() {
+func InitiateYTClient() {
 	ctx := context.Background() //putting ytservice into long-living context of the app
 
 	var err error

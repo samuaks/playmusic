@@ -7,6 +7,7 @@ import (
 	lib "playmusic/library"
 	"playmusic/search"
 	"playmusic/tui"
+	"playmusic/ytapi"
 
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -14,7 +15,7 @@ import (
 )
 
 func main() {
-	err := godotenv.Load() //loading .env for global vaiables
+	err := godotenv.Load() //loading .env for global variables
 	if err != nil {
 		log.Fatal("Can't load secrets from .env")
 	}
@@ -40,6 +41,7 @@ func main() {
 		os.Exit(1)
 	}
 
+	ytapi.InitiateYTClient()
 }
 
 // fmt.Printf("Loaded %d tracks:\n", len(tracks))
