@@ -28,4 +28,7 @@ var (
 			Bold(true).
 			Foreground(lipgloss.Color("86")).
 			Padding(0, 1)
+	emptyStyle = lipgloss.NewStyle().
+			Padding(1, 3).
+			Foreground(lipgloss.Color("240"))
 )

@@ -95,3 +95,22 @@ for _, track := range tracks {
     player.Wait() // unblocks next track when song naturally finishes OR when user presses a key to skip 
 }
 ```
+
+### Bubbletea event loop (main goroutine)
+
+`Update(), View()` Handles messages and updates the view
+
+`Player goroutine` Plays music
+
+`tea.Cmd goroutine` Searcher.Search() blocks here, not in main loop 
+
+
+### Ideal approach on startup
+
+1. LoadLibrary("Media") - blocking 
+2. Start TUI with immediate local tracks
+3. `go ScanSystem()` background job, sends new tracks to TUI via channels
+    * `newTrackMsg` everytime new track was found 
+    * TUI appends it to the list
+
+    
