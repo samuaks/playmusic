@@ -1,8 +1,10 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
+
 	"os"
 	lib "playmusic/library"
 	"playmusic/search"
@@ -10,8 +12,8 @@ import (
 	"playmusic/ytapi"
 
 	tea "github.com/charmbracelet/bubbletea"
-
 	"github.com/joho/godotenv"
+	"github.com/lrstanley/go-ytdlp"
 )
 
 func main() {
@@ -42,6 +44,10 @@ func main() {
 	}
 
 	ytapi.InitiateYTClient()
+
+	//Checking for the yt-dlp binary and installing it if it's not present.
+	//This ensures that the client is ready to use when the app starts (used in main()).
+	ytdlp.MustInstall(context.TODO(), nil)
 }
 
 // fmt.Printf("Loaded %d tracks:\n", len(tracks))

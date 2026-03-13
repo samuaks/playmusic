@@ -5,8 +5,7 @@ import (
 )
 
 func TestReturnsURL(t *testing.T) {
-
-	url, err := GetAudioURLFromYtDlp("https://www.youtube.com/watch?v=5EpyN_6dqyk")
+	url, err := GetStreamURLFromYtDlp("https://www.youtube.com/watch?v=5EpyN_6dqyk")
 	if err != nil {
 		t.Fatal("error occurred while getting audio stream URL:", err)
 	}
