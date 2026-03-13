@@ -76,7 +76,6 @@ func NewModel(tracks []Track, searcher *search.Searcher) Model {
 	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("86"))
 
 	return Model{
-		// doesnt pre-select any track
 		current:  -1,
 		tracks:   tracks,
 		player:   &Player{},
@@ -132,35 +131,8 @@ func (m Model) runSearch(query string) tea.Cmd {
 	}
 }
 
-func (m Model) move(direction int) Model {
-	if len(m.tracks) == 0 {
-		return m
-	}
-
-	m.elapsed = 0
-	m.paused = false
-	if m.list.FilterState() == list.FilterApplied {
-		if direction > 0 {
-			m.list.CursorDown()
-		} else {
-			m.list.CursorUp()
-		}
-		if _, idx, ok := m.selectedTrack(); ok {
-			m.current = idx
-			m.list.SetDelegate(newDelegate(m.tracks[m.current].Path, m.searchQuery))
-
-		}
-	} else {
-		m.current = (m.current + direction + len(m.tracks)) % len(m.tracks)
-		m.list.SetDelegate(newDelegate(m.tracks[m.current].Path, m.searchQuery))
-		m.list.Select(m.current)
-	}
-	return m
-}
-
 func (m Model) Init() tea.Cmd {
-	setTerminalTitle("Playing Music 🎶")
-	//return tea.Batch(m.playCurrent(), tick())
+	setTerminalTitle(TITLE + " 🎶")
 	return tick()
 }
 
@@ -191,17 +163,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.paused = true
 			}
 			return m, nil
-			/*
-				case "n", "right":
-					m = m.move(1)
-					m.player.Next()
-					return m, m.playCurrent()
-
-				case "p", "left":
-					m = m.move(-1)
-					m.player.Next()
-					return m, m.playCurrent()
-			*/
 		case "enter":
 			if _, idx, ok := m.selectedTrack(); ok && idx != m.current {
 				m.elapsed = 0
