@@ -12,15 +12,16 @@ import (
 )
 
 type Track struct {
-	Trackname string
-	Artist    string
-	Title     string
-	Path      string
-	Filename  string
-	Duration  time.Duration
-	Album     string
-	Year      int
-	Genre     string
+	Trackname      string
+	Artist         string
+	Title          string
+	Path           string
+	Filename       string
+	Duration       time.Duration
+	Album          string
+	Year           int
+	Genre          string
+	AudioStreamURL string
 }
 
 func (t Track) FormatDuration() string {

@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-func getVideoURLFromYt(query string) (string, string, error) {
+func GetVideoURLFromYt(query string) (string, string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second) //setting timeout for the request
 	defer cancel()
 

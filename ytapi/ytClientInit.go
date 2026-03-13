@@ -2,7 +2,6 @@ package ytapi
 
 import (
 	"context"
-	"log"
 	"os"
 
 	"google.golang.org/api/option"
@@ -11,7 +10,7 @@ import (
 
 var ytClient *youtube.Service //initializing client that will be used for all requests to youtube API
 
-func InitiateYTClient() {
+func InitiateYTClient() error {
 	ctx := context.Background() //putting ytservice into long-living context of the app
 
 	var err error
@@ -21,6 +20,8 @@ func InitiateYTClient() {
 	)
 
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
+
+	return nil
 }

@@ -14,7 +14,7 @@ import (
 func TestReturnsIdAndTitle(t *testing.T) {
 	initiateYTClientForTest()
 
-	ytVideoId, title, err := getVideoURLFromYt("sleep token chokehold")
+	ytVideoId, title, err := GetVideoURLFromYt("sleep token chokehold")
 	if err != nil {
 		t.Fatal("error occurred while fetching video URL:", err)
 	}

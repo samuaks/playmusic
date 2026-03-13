@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 
 	"os"
 	lib "playmusic/library"
@@ -17,10 +16,9 @@ import (
 )
 
 func main() {
-	err := godotenv.Load() //loading .env for global variables
-	if err != nil {
-		log.Fatal("Can't load secrets from .env")
-	}
+	//Checking for the yt-dlp binary and installing it if it's not present.
+	//This ensures that the client is ready to use when the app starts (used in main()).
+	ytdlp.MustInstall(context.TODO(), nil)
 
 	tracks, err := lib.LoadDefaultLibrary()
 	if err != nil {
@@ -33,21 +31,37 @@ func main() {
 		return
 	}
 
-	searcher := search.New(search.MockSource{})
+	searcher, err := initiateClientsAndSearch()
+	if err != nil {
+		fmt.Println("Search disabled:", err)
+		searcher = search.New(search.MockSource{})
+	}
 
 	ui := tea.NewProgram(
-		tui.NewModel(tracks, searcher), tea.WithAltScreen())
+		tui.NewModel(tracks, searcher),
+		tea.WithAltScreen(),
+	)
 
 	if _, err := ui.Run(); err != nil {
 		fmt.Printf("Error: %v\n", err)
 		os.Exit(1)
 	}
+}
 
-	ytapi.InitiateYTClient()
+func initiateClientsAndSearch() (*search.Searcher, error) {
+	//loading .env for global variables
+	if err := godotenv.Load(); err != nil {
+		fmt.Println("No .env file found")
+	}
 
-	//Checking for the yt-dlp binary and installing it if it's not present.
-	//This ensures that the client is ready to use when the app starts (used in main()).
-	ytdlp.MustInstall(context.TODO(), nil)
+	err := ytapi.InitiateYTClient()
+	if err != nil {
+		return nil, err
+	}
+
+	searcher := search.New(search.YTSource{})
+
+	return searcher, nil
 }
 
 // fmt.Printf("Loaded %d tracks:\n", len(tracks))
