@@ -156,6 +156,27 @@ func decodeWithFFmpeg(path string) (beep.StreamSeekCloser, beep.Format, error) {
 	return &tempFileStreamer{StreamSeekCloser: streamer, path: tmpPath}, format, nil
 }
 
+func decodeStreamUrl(url string) (beep.StreamSeekCloser, beep.Format, error) {
+	cmd := exec.Command("ffmpeg", "-i", url, "-f", "wav", "-")
+
+	cmd.Stderr = io.Discard
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return nil, beep.Format{}, err
+	}
+
+	if err := cmd.Start(); err != nil {
+		return nil, beep.Format{}, err
+	}
+
+	stream, format, err := wav.Decode(stdout)
+	if err != nil {
+		return nil, beep.Format{}, err
+	}
+
+	return stream, format, nil
+}
+
 type tempFileStreamer struct {
 	beep.StreamSeekCloser
 	path string

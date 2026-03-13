@@ -1,16 +1,25 @@
 package main
 
 import (
+	"context"
 	"fmt"
+
 	"os"
 	lib "playmusic/library"
 	"playmusic/search"
 	"playmusic/tui"
+	"playmusic/ytapi"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/joho/godotenv"
+	"github.com/lrstanley/go-ytdlp"
 )
 
 func main() {
+	//Checking for the yt-dlp binary and installing it if it's not present.
+	//This ensures that the client is ready to use when the app starts (used in main()).
+	ytdlp.MustInstall(context.TODO(), nil)
+
 	tracks, err := lib.LoadDefaultLibrary()
 	if err != nil {
 		fmt.Printf("Error loading library: %v\n", err)
@@ -22,16 +31,37 @@ func main() {
 		return
 	}
 
-	searcher := search.New(search.MockSource{})
+	searcher, err := initiateClientsAndSearch()
+	if err != nil {
+		fmt.Println("Search disabled:", err)
+		searcher = search.New(search.MockSource{})
+	}
 
 	ui := tea.NewProgram(
-		tui.NewModel(tracks, searcher), tea.WithAltScreen())
+		tui.NewModel(tracks, searcher),
+		tea.WithAltScreen(),
+	)
 
 	if _, err := ui.Run(); err != nil {
 		fmt.Printf("Error: %v\n", err)
 		os.Exit(1)
 	}
+}
 
+func initiateClientsAndSearch() (*search.Searcher, error) {
+	//loading .env for global variables
+	if err := godotenv.Load(); err != nil {
+		fmt.Println("No .env file found")
+	}
+
+	err := ytapi.InitiateYTClient()
+	if err != nil {
+		return nil, err
+	}
+
+	searcher := search.New(search.YTSource{})
+
+	return searcher, nil
 }
 
 // fmt.Printf("Loaded %d tracks:\n", len(tracks))
