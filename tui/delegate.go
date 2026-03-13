@@ -10,12 +10,14 @@ import (
 type trackDelegate struct {
 	list.DefaultDelegate
 	currentPath string
+	searchQuery string
 }
 
-func newDelegate(currentPath string) trackDelegate {
+func newDelegate(currentPath string, searchQuery string) trackDelegate {
 	d := trackDelegate{
 		DefaultDelegate: list.NewDefaultDelegate(),
 		currentPath:     currentPath,
+		searchQuery:     searchQuery,
 	}
 	d.Styles.SelectedTitle = selectedTitleStyle
 	d.Styles.SelectedDesc = selectedDescStyle
@@ -28,10 +30,11 @@ func (d trackDelegate) Render(w io.Writer, m list.Model, index int, item list.It
 		return
 	}
 
-	title := t.Title()
+	title := highlightMatch(t.Title(), d.searchQuery)
 	desc := t.Description()
 
 	//isPlaying := index == d.current && d.current != -1
+
 	isPlaying := t.track.Path == d.currentPath
 	isSelected := index == m.Index()
 
