@@ -8,6 +8,8 @@ import (
 	. "playmusic/helpers"
 )
 
+// BuildDiscoveredTrack creates the minimal track shape that is safe to show
+// before metadata and duration probing have completed.
 func BuildDiscoveredTrack(path string) Track {
 	filename := filepath.Base(path)
 
@@ -18,6 +20,8 @@ func BuildDiscoveredTrack(path string) Track {
 	}
 }
 
+// EnrichTrack fills the metadata-dependent fields for an already discovered
+// track while preserving its identity fields.
 func EnrichTrack(track Track) (Track, error) {
 	metadata, metadataErr := GetMetadata(track.Path)
 	duration, durationErr := ProbeDuration(track.Path)
