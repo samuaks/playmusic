@@ -10,17 +10,17 @@ import (
 )
 
 type ScanEvent struct {
-    Type  ScanEventType
-    Track *Track
-    Err   error
+	Type  ScanEventType
+	Track *Track
+	Err   error
 }
 
 type ScanEventType int
 
 const (
-    ScanEventDiscovered ScanEventType = iota
-    ScanEventEnriched
-    ScanEventDone
+	ScanEventDiscovered ScanEventType = iota
+	ScanEventEnriched
+	ScanEventDone
 )
 
 /*
@@ -62,15 +62,25 @@ func ScanForMedia(ctx context.Context, dirs []string, out chan<- ScanEvent) {
 			default:
 			}
 
-			track := BuildDiscoveredTrack(path)
-			track, enrichErr := EnrichTrack(track)
+			discovered := BuildDiscoveredTrack(path)
+
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case out <- ScanEvent{
+				Type:  ScanEventDiscovered,
+				Track: &discovered,
+			}:
+			}
+
+			enriched, enrichErr := EnrichTrack(discovered)
 
 			select {
 			case <-ctx.Done():
 				return ctx.Err()
 			case out <- ScanEvent{
 				Type:  ScanEventEnriched,
-				Track: &track,
+				Track: &enriched,
 				Err:   enrichErr,
 			}:
 				return nil

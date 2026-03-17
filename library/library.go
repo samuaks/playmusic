@@ -66,8 +66,8 @@ func DefaultLibraryDirs() []string {
 }
 
 /*  BackgroundLibraryDirs returns the directories that should be scanned
-	after the TUI has already started. The local Media directory is excluded
-	so startup stays fast and we do not scan the same source twice.*/
+after the TUI has already started. The local Media directory is excluded
+so startup stays fast and we do not scan the same source twice.*/
 
 func BackgroundLibraryDirs() []string {
 	var dirs []string
