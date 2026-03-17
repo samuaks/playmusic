@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 	. "playmusic/decoder"
+	"runtime"
+	"strconv"
 	"strings"
 )
 
@@ -23,6 +25,22 @@ const (
 	ScanEventDone
 )
 
+func normalizedPathKey(path string) string {
+	cleaned := filepath.Clean(path)
+	if runtime.GOOS == "windows" {
+		return strings.ToLower(cleaned)
+	}
+	return cleaned
+}
+
+func fileSignatureKey(d fs.DirEntry) (string, error) {
+	info, err := d.Info()
+	if err != nil {
+		return "", err
+	}
+	return strings.ToLower(d.Name()) + ":" + strconv.FormatInt(info.Size(), 10), nil
+}
+
 /*
 ScanForMedia scans the provided directories in the background and emits
 
@@ -31,6 +49,8 @@ ScanForMedia scans the provided directories in the background and emits
 */
 func ScanForMedia(ctx context.Context, dirs []string, out chan<- ScanEvent) {
 	defer close(out)
+	seenPaths := make(map[string]struct{})
+	seenSignatures := make(map[string]struct{})
 
 	for _, dir := range dirs {
 		if strings.TrimSpace(dir) == "" {
@@ -60,6 +80,20 @@ func ScanForMedia(ctx context.Context, dirs []string, out chan<- ScanEvent) {
 			case <-ctx.Done():
 				return ctx.Err()
 			default:
+			}
+
+			pathKey := normalizedPathKey(path)
+			if _, exists := seenPaths[pathKey]; exists {
+				return nil
+			}
+			seenPaths[pathKey] = struct{}{}
+
+			sigKey, sigErr := fileSignatureKey(d)
+			if sigErr == nil && sigKey != "" {
+				if _, exists := seenSignatures[sigKey]; exists {
+					return nil
+				}
+				seenSignatures[sigKey] = struct{}{}
 			}
 
 			discovered := BuildDiscoveredTrack(path)

@@ -213,3 +213,66 @@ func TestScanForMediaStopsWhenContextCanceled(t *testing.T) {
 		t.Fatal("expected no events after cancellation")
 	}
 }
+
+func TestScanForMediaSkipsDuplicateFilenameAndSizeBeforeEnrichment(t *testing.T) {
+	root := t.TempDir()
+	dirA := filepath.Join(root, "a")
+	dirB := filepath.Join(root, "b")
+
+	if err := os.MkdirAll(dirA, 0755); err != nil {
+		t.Fatalf("failed to create dirA: %v", err)
+	}
+	if err := os.MkdirAll(dirB, 0755); err != nil {
+		t.Fatalf("failed to create dirB: %v", err)
+	}
+
+	content := []byte("same-size")
+	if err := os.WriteFile(filepath.Join(dirA, "song.mp3"), content, 0644); err != nil {
+		t.Fatalf("failed to write dirA track: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dirB, "song.mp3"), content, 0644); err != nil {
+		t.Fatalf("failed to write dirB track: %v", err)
+	}
+
+	events := collectScanEvents(t, []string{dirA, dirB})
+	discovered := trackEventsByType(events, ScanEventDiscovered)
+	enriched := trackEventsByType(events, ScanEventEnriched)
+
+	if len(discovered) != 1 {
+		t.Fatalf("expected 1 discovered event after dedup, got %d", len(discovered))
+	}
+	if len(enriched) != 1 {
+		t.Fatalf("expected 1 enriched event after dedup, got %d", len(enriched))
+	}
+}
+
+func TestScanForMediaProcessesDistinctFilesWithSameName(t *testing.T) {
+	root := t.TempDir()
+	dirA := filepath.Join(root, "a")
+	dirB := filepath.Join(root, "b")
+
+	if err := os.MkdirAll(dirA, 0755); err != nil {
+		t.Fatalf("failed to create dirA: %v", err)
+	}
+	if err := os.MkdirAll(dirB, 0755); err != nil {
+		t.Fatalf("failed to create dirB: %v", err)
+	}
+
+	if err := os.WriteFile(filepath.Join(dirA, "song.mp3"), []byte("short"), 0644); err != nil {
+		t.Fatalf("failed to write dirA track: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dirB, "song.mp3"), []byte("longer-content"), 0644); err != nil {
+		t.Fatalf("failed to write dirB track: %v", err)
+	}
+
+	events := collectScanEvents(t, []string{dirA, dirB})
+	discovered := trackEventsByType(events, ScanEventDiscovered)
+	enriched := trackEventsByType(events, ScanEventEnriched)
+
+	if len(discovered) != 2 {
+		t.Fatalf("expected 2 discovered events for distinct files, got %d", len(discovered))
+	}
+	if len(enriched) != 2 {
+		t.Fatalf("expected 2 enriched events for distinct files, got %d", len(enriched))
+	}
+}
