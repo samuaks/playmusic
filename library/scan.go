@@ -8,6 +8,8 @@ import (
 	"strings"
 )
 
+var enrichTrack = EnrichTrack
+
 // ScanEvent carries either a discovered/enriched track or a non-fatal scan
 // error. Scan completion is signaled by closing the event channel.
 type ScanEvent struct {
@@ -73,7 +75,7 @@ func ScanForMedia(ctx context.Context, dirs []string, out chan<- ScanEvent) {
 			}:
 			}
 
-			enriched, enrichErr := EnrichTrack(discovered)
+			enriched, enrichErr := enrichTrack(discovered)
 
 			select {
 			case <-ctx.Done():

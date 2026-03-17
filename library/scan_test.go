@@ -2,9 +2,11 @@ package library
 
 import (
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 )
 
 func collectScanEvents(t *testing.T, dirs []string) []ScanEvent {
@@ -119,8 +121,104 @@ func TestScanForMediaDiscoveredEventContainsBaseTrackOnly(t *testing.T) {
 	if evt.Track.Filename != "song.mp3" {
 		t.Fatalf("expected filename song.mp3, got %q", evt.Track.Filename)
 	}
+	if evt.Track.Trackname != "song" {
+		t.Fatalf("expected discovered trackname song, got %q", evt.Track.Trackname)
+	}
+	if evt.Track.Artist != "" {
+		t.Fatalf("expected empty artist before enrichment, got %q", evt.Track.Artist)
+	}
+	if evt.Track.Title != "" {
+		t.Fatalf("expected empty title before enrichment, got %q", evt.Track.Title)
+	}
+	if evt.Track.Album != "" {
+		t.Fatalf("expected empty album before enrichment, got %q", evt.Track.Album)
+	}
+	if evt.Track.Genre != "" {
+		t.Fatalf("expected empty genre before enrichment, got %q", evt.Track.Genre)
+	}
+	if evt.Track.Year != 0 {
+		t.Fatalf("expected zero year before enrichment, got %d", evt.Track.Year)
+	}
 	if evt.Track.Duration != 0 {
 		t.Fatalf("expected zero duration before enrichment, got %v", evt.Track.Duration)
+	}
+}
+
+func TestScanForMediaEmitsDiscoveredBeforeEnrichmentCompletes(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "song.mp3")
+
+	if err := os.WriteFile(path, []byte("content"), 0644); err != nil {
+		t.Fatalf("failed to write track: %v", err)
+	}
+
+	originalEnrichTrack := enrichTrack
+	started := make(chan struct{}, 1)
+	release := make(chan struct{})
+	defer func() {
+		enrichTrack = originalEnrichTrack
+	}()
+
+	enrichTrack = func(track Track) (Track, error) {
+		started <- struct{}{}
+		<-release
+		return originalEnrichTrack(track)
+	}
+
+	ch := make(chan ScanEvent)
+	go ScanForMedia(context.Background(), []string{dir}, ch)
+
+	select {
+	case evt, ok := <-ch:
+		if !ok {
+			t.Fatal("expected discovered event before channel close")
+		}
+		if evt.Type != ScanEventDiscovered {
+			t.Fatalf("expected first event to be discovered, got %v", evt.Type)
+		}
+		if evt.Track == nil {
+			t.Fatal("expected discovered event to include track payload")
+		}
+		if evt.Track.Path != path {
+			t.Fatalf("expected discovered path %q, got %q", path, evt.Track.Path)
+		}
+		if evt.Track.Duration != 0 {
+			t.Fatalf("expected zero duration before enrichment, got %v", evt.Track.Duration)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("expected discovered event before enrichment completed")
+	}
+
+	select {
+	case <-started:
+	case <-time.After(2 * time.Second):
+		t.Fatal("expected enrichment to start after discovered event")
+	}
+
+	select {
+	case evt := <-ch:
+		t.Fatalf("expected no enriched event before releasing enrichment, got %v", evt.Type)
+	case <-time.After(100 * time.Millisecond):
+	}
+
+	close(release)
+
+	select {
+	case evt, ok := <-ch:
+		if !ok {
+			t.Fatal("expected enriched event after releasing enrichment")
+		}
+		if evt.Type != ScanEventEnriched {
+			t.Fatalf("expected second event to be enriched, got %v", evt.Type)
+		}
+		if evt.Track == nil {
+			t.Fatal("expected enriched event to include track payload")
+		}
+		if evt.Track.Path != path {
+			t.Fatalf("expected enriched path %q, got %q", path, evt.Track.Path)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("expected enriched event after releasing enrichment")
 	}
 }
 
@@ -253,6 +351,61 @@ func TestScanForMediaEmitsEnrichedEventEvenWhenEnrichmentFails(t *testing.T) {
 	}
 	if evt.Track.Path != path {
 		t.Fatalf("expected path %q, got %q", path, evt.Track.Path)
+	}
+}
+
+func TestScanForMediaEmitsDiscoveredBeforeFailedEnrichment(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "song.mp3")
+
+	if err := os.WriteFile(path, []byte("content"), 0644); err != nil {
+		t.Fatalf("failed to write track: %v", err)
+	}
+
+	originalEnrichTrack := enrichTrack
+	defer func() {
+		enrichTrack = originalEnrichTrack
+	}()
+
+	wantErr := errors.New("enrichment failed")
+	enrichTrack = func(track Track) (Track, error) {
+		enriched := track
+		enriched.Trackname = "Broken Song"
+		return enriched, wantErr
+	}
+
+	ch := make(chan ScanEvent)
+	go ScanForMedia(context.Background(), []string{dir}, ch)
+
+	first, ok := <-ch
+	if !ok {
+		t.Fatal("expected discovered event")
+	}
+	if first.Type != ScanEventDiscovered {
+		t.Fatalf("expected first event to be discovered, got %v", first.Type)
+	}
+	if first.Track == nil {
+		t.Fatal("expected discovered event to include track payload")
+	}
+	if first.Track.Path != path {
+		t.Fatalf("expected discovered path %q, got %q", path, first.Track.Path)
+	}
+
+	second, ok := <-ch
+	if !ok {
+		t.Fatal("expected enriched event")
+	}
+	if second.Type != ScanEventEnriched {
+		t.Fatalf("expected second event to be enriched, got %v", second.Type)
+	}
+	if second.Track == nil {
+		t.Fatal("expected enriched event to include track payload")
+	}
+	if second.Track.Path != path {
+		t.Fatalf("expected enriched path %q, got %q", path, second.Track.Path)
+	}
+	if !errors.Is(second.Err, wantErr) {
+		t.Fatalf("expected enrichment error %v, got %v", wantErr, second.Err)
 	}
 }
 
