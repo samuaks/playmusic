@@ -3,14 +3,13 @@ package tui
 import (
 	"errors"
 	"testing"
+	"time"
 
 	"playmusic/library"
 	"playmusic/search"
-
-	tea "github.com/charmbracelet/bubbletea"
 )
 
-func TestModelUpdateAddsLibraryTrackFoundMsg(t *testing.T) {
+func TestModelUpdateAddsDiscoveredLibraryTrack(t *testing.T) {
 	initial := []library.Track{
 		{
 			Trackname: "Existing",
@@ -43,7 +42,7 @@ func TestModelUpdateAddsLibraryTrackFoundMsg(t *testing.T) {
 	}
 }
 
-func TestModelUpdateSkipsDuplicateLibraryTrackByPath(t *testing.T) {
+func TestModelUpdateSkipsDuplicateDiscoveredLibraryTrack(t *testing.T) {
 	initial := []library.Track{
 		{
 			Trackname: "Existing",
@@ -67,6 +66,72 @@ func TestModelUpdateSkipsDuplicateLibraryTrackByPath(t *testing.T) {
 
 	if len(got.tracks) != 1 {
 		t.Fatalf("expected duplicate path to be ignored, got %d tracks", len(got.tracks))
+	}
+	if cmd == nil {
+		t.Fatal("expected Update to keep waiting for the next library event")
+	}
+}
+
+func TestModelUpdateReplacesTrackOnLibraryTrackUpdatedMsg(t *testing.T) {
+	initial := []library.Track{
+		{
+			Trackname: "song.mp3",
+			Path:      "/music/song.mp3",
+			Filename:  "song.mp3",
+		},
+	}
+
+	scanCh := make(chan library.ScanEvent)
+	model := NewModel(initial, search.New(search.MockSource{}), scanCh)
+
+	updatedModel, cmd := model.Update(libraryTrackUpdatedMsg{
+		track: library.Track{
+			Trackname: "Artist - Title",
+			Path:      "/music/song.mp3",
+			Filename:  "song.mp3",
+			Artist:    "Artist",
+			Title:     "Title",
+			Duration:  3 * time.Minute,
+		},
+	})
+
+	got := updatedModel.(Model)
+
+	if len(got.tracks) != 1 {
+		t.Fatalf("expected updated track to replace existing one, got %d tracks", len(got.tracks))
+	}
+	if got.tracks[0].Artist != "Artist" {
+		t.Fatalf("expected artist to be updated, got %q", got.tracks[0].Artist)
+	}
+	if got.tracks[0].Duration != 3*time.Minute {
+		t.Fatalf("expected duration to be updated, got %v", got.tracks[0].Duration)
+	}
+	if cmd == nil {
+		t.Fatal("expected Update to keep waiting for the next library event")
+	}
+}
+
+func TestModelUpdateAppendsUpdatedTrackWhenOriginalMissing(t *testing.T) {
+	scanCh := make(chan library.ScanEvent)
+	model := NewModel(nil, search.New(search.MockSource{}), scanCh)
+
+	updatedModel, cmd := model.Update(libraryTrackUpdatedMsg{
+		track: library.Track{
+			Trackname: "Artist - Title",
+			Path:      "/music/song.mp3",
+			Filename:  "song.mp3",
+			Artist:    "Artist",
+			Title:     "Title",
+		},
+	})
+
+	got := updatedModel.(Model)
+
+	if len(got.tracks) != 1 {
+		t.Fatalf("expected missing updated track to be appended, got %d tracks", len(got.tracks))
+	}
+	if got.tracks[0].Path != "/music/song.mp3" {
+		t.Fatalf("expected appended updated track path, got %q", got.tracks[0].Path)
 	}
 	if cmd == nil {
 		t.Fatal("expected Update to keep waiting for the next library event")
@@ -107,14 +172,17 @@ func TestWaitForLibraryEventReturnsNilForNilChannel(t *testing.T) {
 	}
 }
 
-func TestWaitForLibraryEventReturnsTrackFoundMsg(t *testing.T) {
+func TestWaitForLibraryEventReturnsTrackFoundMsgForDiscoveredEvent(t *testing.T) {
 	ch := make(chan library.ScanEvent, 1)
 	track := library.Track{
 		Trackname: "Found",
 		Path:      "/music/found.mp3",
 		Filename:  "found.mp3",
 	}
-	ch <- library.ScanEvent{Track: &track}
+	ch <- library.ScanEvent{
+		Type:  library.ScanEventDiscovered,
+		Track: &track,
+	}
 
 	cmd := waitForLibraryEvent(ch)
 	if cmd == nil {
@@ -128,6 +196,66 @@ func TestWaitForLibraryEventReturnsTrackFoundMsg(t *testing.T) {
 	}
 	if found.track.Path != track.Path {
 		t.Fatalf("expected track path %q, got %q", track.Path, found.track.Path)
+	}
+}
+
+func TestWaitForLibraryEventReturnsTrackUpdatedMsgForEnrichedEvent(t *testing.T) {
+	ch := make(chan library.ScanEvent, 1)
+	track := library.Track{
+		Trackname: "Artist - Found",
+		Path:      "/music/found.mp3",
+		Filename:  "found.mp3",
+		Artist:    "Artist",
+	}
+	ch <- library.ScanEvent{
+		Type:  library.ScanEventEnriched,
+		Track: &track,
+	}
+
+	cmd := waitForLibraryEvent(ch)
+	if cmd == nil {
+		t.Fatal("expected command for scan channel")
+	}
+
+	msg := cmd()
+	updated, ok := msg.(libraryTrackUpdatedMsg)
+	if !ok {
+		t.Fatalf("expected libraryTrackUpdatedMsg, got %T", msg)
+	}
+	if updated.track.Path != track.Path {
+		t.Fatalf("expected track path %q, got %q", track.Path, updated.track.Path)
+	}
+	if updated.track.Artist != "Artist" {
+		t.Fatalf("expected updated artist %q, got %q", "Artist", updated.track.Artist)
+	}
+}
+
+func TestWaitForLibraryEventPrefersTrackUpdateOverErrorWhenTrackPresent(t *testing.T) {
+	ch := make(chan library.ScanEvent, 1)
+	track := library.Track{
+		Trackname: "Artist - Found",
+		Path:      "/music/found.mp3",
+		Filename:  "found.mp3",
+		Artist:    "Artist",
+	}
+	ch <- library.ScanEvent{
+		Type:  library.ScanEventEnriched,
+		Track: &track,
+		Err:   errors.New("ffprobe failed"),
+	}
+
+	cmd := waitForLibraryEvent(ch)
+	if cmd == nil {
+		t.Fatal("expected command for scan channel")
+	}
+
+	msg := cmd()
+	updated, ok := msg.(libraryTrackUpdatedMsg)
+	if !ok {
+		t.Fatalf("expected libraryTrackUpdatedMsg, got %T", msg)
+	}
+	if updated.track.Path != track.Path {
+		t.Fatalf("expected track path %q, got %q", track.Path, updated.track.Path)
 	}
 }
 
@@ -173,8 +301,5 @@ func TestModelInitReturnsStartupCmd(t *testing.T) {
 
 	if cmd == nil {
 		t.Fatal("expected Init to return a startup command batch")
-	}
-	if _, ok := any(cmd).(tea.Cmd); !ok {
-		t.Fatal("expected Init to return a tea.Cmd")
 	}
 }

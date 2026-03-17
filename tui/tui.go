@@ -36,6 +36,12 @@ type libraryTrackFoundMsg struct {
 	track library.Track
 }
 
+// libraryTrackUpdatedMsg carries enrichment updates for an already
+// discovered library track.
+type libraryTrackUpdatedMsg struct {
+	track library.Track
+}
+
 // libraryScanErrorMsg reports a non-fatal background scan error.
 type libraryScanErrorMsg struct {
 	err error
@@ -64,13 +70,24 @@ func waitForLibraryEvent(ch <-chan library.ScanEvent) tea.Cmd {
 		if !ok {
 			return libraryScanDoneMsg{}
 		}
-		if evt.Err != nil {
-			return libraryScanErrorMsg{err: evt.Err}
+		if evt.Track == nil {
+			if evt.Err != nil {
+				return libraryScanErrorMsg{err: evt.Err}
+			}
+			return libraryScanDoneMsg{}
 		}
-		if evt.Track != nil {
+
+		switch evt.Type {
+		case library.ScanEventDiscovered:
 			return libraryTrackFoundMsg{track: *evt.Track}
+		case library.ScanEventEnriched:
+			return libraryTrackUpdatedMsg{track: *evt.Track}
+		default:
+			if evt.Err != nil {
+				return libraryScanErrorMsg{err: evt.Err}
+			}
+			return libraryScanDoneMsg{}
 		}
-		return libraryScanDoneMsg{}
 	}
 }
 
@@ -157,6 +174,15 @@ func (m Model) selectedTrack() (library.Track, int, bool) {
 		}
 	}
 	return library.Track{}, 0, false
+}
+
+func (m Model) trackIndexByPath(path string) int {
+	for i, t := range m.tracks {
+		if t.Path == path {
+			return i
+		}
+	}
+	return -1
 }
 
 func (m Model) runSearch(query string) tea.Cmd {
@@ -273,12 +299,18 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case libraryTrackFoundMsg:
 		// Deduplicate by path because startup tracks and background scan
 		// may overlap or the scanner may revisit the same location.
-		for _, t := range m.tracks {
-			if t.Path == msg.track.Path {
-				return m, waitForLibraryEvent(m.scanCh)
-			}
+		if m.trackIndexByPath(msg.track.Path) == -1 {
+			m.tracks = append(m.tracks, msg.track)
+			m.updateListItems()
 		}
-		m.tracks = append(m.tracks, msg.track)
+		return m, waitForLibraryEvent(m.scanCh)
+	case libraryTrackUpdatedMsg:
+		idx := m.trackIndexByPath(msg.track.Path)
+		if idx >= 0 {
+			m.tracks[idx] = msg.track
+		} else {
+			m.tracks = append(m.tracks, msg.track)
+		}
 		m.updateListItems()
 		return m, waitForLibraryEvent(m.scanCh)
 	case libraryScanErrorMsg:
