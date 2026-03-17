@@ -36,6 +36,7 @@ A modular command-line media player written in Go. Uses [beep](https://github.co
 | 8 | Album / playlist support | Feature | Planned |
 | 9 | Artist fetching (background job) | Feature | Planned |
 | 10 | Play songs from external sources (yt / spotify) | Feature | Planned |
+| 11 | Host app over SSH using Charmbracelet Wish | Feature | Planned |
 
 
 
