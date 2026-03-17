@@ -24,7 +24,8 @@ type trackItem struct {
 type searchDebounceMsg struct {
 	query string
 }
-type newTrackMsg struct {
+// searchTrackFoundMsg carries a track returned by the search subsystem.
+type searchTrackFoundMsg struct {
 	track Track
 }
 
@@ -34,6 +35,9 @@ type libraryTrackFoundMsg struct {
 	track Track
 }
 
+// libraryScanDoneMsg signals that the background library scan has finished.
+type libraryScanDoneMsg struct{}
+
 type searchDoneMsg struct{}
 
 func debounceSearch(query string) tea.Cmd {
@@ -42,8 +46,8 @@ func debounceSearch(query string) tea.Cmd {
 	})
 }
 
-// waitForScannedTrack blocks until the next background-scanned track arrives
-// and converts it into a Bubble Tea message handled by Update.
+// waitForScannedTrack blocks until the next background-scanned track arrives.
+// if the scan channel is closed, it emits a completion message instead
 func waitForScannedTrack(ch <-chan Track) tea.Cmd {
 	if ch == nil {
 		return nil
@@ -52,7 +56,7 @@ func waitForScannedTrack(ch <-chan Track) tea.Cmd {
 	return func() tea.Msg {
 		track, ok := <-ch
 		if !ok {
-			return nil
+			return libraryScanDoneMsg{}
 		}
 		return libraryTrackFoundMsg{track: track}
 	}
@@ -150,7 +154,7 @@ func (m Model) runSearch(query string) tea.Cmd {
 			return searchDoneMsg{}
 		}
 		for _, t := range tracks {
-			return newTrackMsg{t}
+			return searchTrackFoundMsg{track: t}
 		}
 		return searchDoneMsg{}
 	}
@@ -243,7 +247,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			return m, tea.Batch(m.runSearch(msg.query), m.spinner.Tick)
 		}
-	case newTrackMsg:
+	case searchTrackFoundMsg:
 		m.searching = false
 		m.list.SetSize(m.width, m.height-playerBarHeight-searchBarHeight)
 		for _, t := range m.tracks {
@@ -265,6 +269,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.tracks = append(m.tracks, msg.track)
 		m.updateListItems()
 		return m, waitForScannedTrack(m.scanCh)
+	case libraryScanDoneMsg:
+		return m, nil
 	case searchDoneMsg:
 		m.searching = false
 		m.list.SetSize(m.width, m.height-playerBarHeight-searchBarHeight)
