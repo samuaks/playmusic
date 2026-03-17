@@ -30,7 +30,7 @@ type newTrackMsg struct {
 type searchDoneMsg struct{}
 
 func debounceSearch(query string) tea.Cmd {
-	return tea.Tick(500*time.Millisecond, func(t time.Time) tea.Msg {
+	return tea.Tick(1*time.Second, func(t time.Time) tea.Msg {
 		return searchDebounceMsg{query}
 	})
 }
