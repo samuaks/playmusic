@@ -52,6 +52,31 @@ func TestScanForMediaStreamsSupportedFiles(t *testing.T) {
 	}
 }
 
+func TestScanForMediaEmitsTypedTrackEvents(t *testing.T) {
+	dir := t.TempDir()
+
+	if err := os.WriteFile(filepath.Join(dir, "song.mp3"), []byte("one"), 0644); err != nil {
+		t.Fatalf("failed to write song: %v", err)
+	}
+
+	events := collectScanEvents(t, []string{dir})
+
+	if len(events) != 1 {
+		t.Fatalf("expected 1 event, got %d", len(events))
+	}
+
+	evt := events[0]
+	if evt.Type != ScanEventEnriched {
+		t.Fatalf("expected event type %v, got %v", ScanEventEnriched, evt.Type)
+	}
+	if evt.Track == nil {
+		t.Fatal("expected track payload")
+	}
+	if evt.Err != nil {
+		t.Fatalf("expected nil error, got %v", evt.Err)
+	}
+}
+
 func TestScanForMediaScansRecursively(t *testing.T) {
 	root := t.TempDir()
 	nested := filepath.Join(root, "nested", "deeper")

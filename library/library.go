@@ -68,7 +68,7 @@ func DefaultLibraryDirs() []string {
 /*  BackgroundLibraryDirs returns the directories that should be scanned
 	after the TUI has already started. The local Media directory is excluded
 	so startup stays fast and we do not scan the same source twice.*/
-	
+
 func BackgroundLibraryDirs() []string {
 	var dirs []string
 	mediaDir := filepath.Clean("Media")
@@ -97,24 +97,17 @@ func loadFromDir(dir string) ([]Track, error) {
 		if d.IsDir() || !IsSupported(d.Name()) {
 			return nil
 		}
-		name := d.Name()
 
-		metadata, _ := GetMetadata(path)
+		discovered := BuildDiscoveredTrack(path)
+		enriched, _ := EnrichTrack(discovered)
 
-		tracks = append(tracks, Track{
-			Trackname: formatTrackName(metadata.Artist, metadata.Title, name),
-			Title:     metadata.Title,
-			Artist:    metadata.Artist,
-			Filename:  name,
-			Path:      path,
-			Year:      metadata.Year,
-			Genre:     metadata.Genre,
-		})
+		tracks = append(tracks, enriched)
 		return nil
 	})
 	if err != nil {
 		return nil, err
 	}
+
 	return enrichAndDeduplicate(tracks), nil
 }
 

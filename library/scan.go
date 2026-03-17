@@ -11,9 +11,18 @@ import (
 )
 
 type ScanEvent struct {
-	Track *Track
-	Err   error
+    Type  ScanEventType
+    Track *Track
+    Err   error
 }
+
+type ScanEventType int
+
+const (
+    ScanEventDiscovered ScanEventType = iota
+    ScanEventEnriched
+    ScanEventDone
+)
 
 /*
 ScanForMedia scans the provided directories in the background and emits
