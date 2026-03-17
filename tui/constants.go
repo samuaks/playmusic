@@ -7,4 +7,5 @@ const HELP_TEXT = "space pause/resume • enter play • up/down navigate • ct
 const (
 	playerBarHeight = 7
 	searchBarHeight = 3
+	scanBarHeight   = 3
 )

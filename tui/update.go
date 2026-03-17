@@ -48,7 +48,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.width = msg.Width
 		m.height = msg.Height
 		m.progress.Width = msg.Width - 6
-		m.list.SetSize(msg.Width, msg.Height-playerBarHeight-searchBarHeight)
+		m.list.SetSize(msg.Width, msg.Height-playerBarHeight-searchBarHeight-scanBarHeight)
 
 	case tea.KeyMsg:
 		switch msg.String() {
@@ -115,13 +115,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case searchDebounceMsg:
 		if msg.query == m.searchQuery && msg.query != "" {
 			m.searching = true
-			m.list.SetSize(m.width, m.height-playerBarHeight-searchBarHeight)
+			m.list.SetSize(m.width, m.height-playerBarHeight-searchBarHeight-scanBarHeight)
 
 			return m, tea.Batch(m.runSearch(msg.query), m.spinner.Tick)
 		}
 	case searchTrackFoundMsg:
 		m.searching = false
-		m.list.SetSize(m.width, m.height-playerBarHeight-searchBarHeight)
+		m.list.SetSize(m.width, m.height-playerBarHeight-searchBarHeight-scanBarHeight)
 		for _, t := range m.tracks {
 			if t.Path == msg.track.Path {
 				return m, nil
@@ -158,7 +158,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 	case searchDoneMsg:
 		m.searching = false
-		m.list.SetSize(m.width, m.height-playerBarHeight-searchBarHeight)
+		m.list.SetSize(m.width, m.height-playerBarHeight-searchBarHeight-scanBarHeight)
 	}
 
 	m.list, cmd = m.list.Update(msg)
