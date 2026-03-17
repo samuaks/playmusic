@@ -27,12 +27,35 @@ type searchDebounceMsg struct {
 type newTrackMsg struct {
 	track Track
 }
+
+// libraryTrackFoundMsg delivers a track discovered by the background
+// library scan into the Bubble Tea update loop.
+type libraryTrackFoundMsg struct {
+	track Track
+}
+
 type searchDoneMsg struct{}
 
 func debounceSearch(query string) tea.Cmd {
 	return tea.Tick(500*time.Millisecond, func(t time.Time) tea.Msg {
 		return searchDebounceMsg{query}
 	})
+}
+
+// waitForScannedTrack blocks until the next background-scanned track arrives
+// and converts it into a Bubble Tea message handled by Update.
+func waitForScannedTrack(ch <-chan Track) tea.Cmd {
+	if ch == nil {
+		return nil
+	}
+
+	return func() tea.Msg {
+		track, ok := <-ch
+		if !ok {
+			return nil
+		}
+		return libraryTrackFoundMsg{track: track}
+	}
 }
 
 func (t trackItem) Title() string { return t.track.Trackname } // u can use some of the additional metadata for the UI
@@ -54,9 +77,10 @@ type Model struct {
 	spinner     spinner.Model
 	searching   bool
 	searchQuery string
+	scanCh      <-chan Track
 }
 
-func NewModel(tracks []Track, searcher *search.Searcher) Model {
+func NewModel(tracks []Track, searcher *search.Searcher, scanCh <-chan Track) Model {
 	items := make([]list.Item, len(tracks))
 
 	for i, t := range tracks {
@@ -83,6 +107,7 @@ func NewModel(tracks []Track, searcher *search.Searcher) Model {
 		progress: progress.New(progress.WithDefaultGradient()),
 		searcher: searcher,
 		spinner:  s,
+		scanCh:   scanCh,
 	}
 
 }
@@ -133,7 +158,11 @@ func (m Model) runSearch(query string) tea.Cmd {
 
 func (m Model) Init() tea.Cmd {
 	setTerminalTitle(TITLE + " 🎶")
-	return tick()
+
+	return tea.Batch(
+		tick(),
+		waitForScannedTrack(m.scanCh),
+	)
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -225,6 +254,17 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.tracks = append(m.tracks, msg.track)
 		cmd = m.list.InsertItem(len(m.tracks)-1, trackItem{msg.track})
 		return m, cmd
+	case libraryTrackFoundMsg:
+		// Deduplicate by path because startup tracks and background scan
+		// may overlap or the scanner may revisit the same location.
+		for _, t := range m.tracks {
+			if t.Path == msg.track.Path {
+				return m, waitForScannedTrack(m.scanCh)
+			}
+		}
+		m.tracks = append(m.tracks, msg.track)
+		m.updateListItems()
+		return m, waitForScannedTrack(m.scanCh)
 	case searchDoneMsg:
 		m.searching = false
 		m.list.SetSize(m.width, m.height-playerBarHeight-searchBarHeight)
