@@ -234,6 +234,28 @@ func TestScanForMediaSignalsCompletionByClosingChannel(t *testing.T) {
 	}
 }
 
+func TestScanForMediaEmitsEnrichedEventEvenWhenEnrichmentFails(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "song.mp3")
+
+	if err := os.WriteFile(path, []byte("content"), 0644); err != nil {
+		t.Fatalf("failed to write track: %v", err)
+	}
+
+	events := collectScanEvents(t, []string{dir})
+
+	evt, ok := firstTrackEventByType(events, ScanEventEnriched)
+	if !ok {
+		t.Fatal("expected enriched event")
+	}
+	if evt.Track == nil {
+		t.Fatal("expected enriched event to include track payload")
+	}
+	if evt.Track.Path != path {
+		t.Fatalf("expected path %q, got %q", path, evt.Track.Path)
+	}
+}
+
 func TestScanForMediaSkipsDuplicateFilenameAndSizeBeforeEnrichment(t *testing.T) {
 	root := t.TempDir()
 	dirA := filepath.Join(root, "a")

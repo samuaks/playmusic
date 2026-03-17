@@ -295,6 +295,53 @@ func TestWaitForLibraryEventReturnsTrackUpdatedMsgForEnrichedEvent(t *testing.T)
 	}
 }
 
+func TestModelUpdateKeepsWaitingAfterLibraryTrackFoundMsg(t *testing.T) {
+	scanCh := make(chan library.ScanEvent)
+	model := NewModel(nil, search.New(search.MockSource{}), scanCh)
+
+	updatedModel, cmd := model.Update(libraryTrackFoundMsg{
+		track: library.Track{
+			Trackname: "Found",
+			Path:      "/music/found.mp3",
+			Filename:  "found.mp3",
+		},
+	})
+
+	got := updatedModel.(Model)
+	if len(got.tracks) != 1 {
+		t.Fatalf("expected 1 track after discovered event, got %d", len(got.tracks))
+	}
+	if cmd == nil {
+		t.Fatal("expected Update to keep waiting for the next background scan event")
+	}
+}
+
+func TestModelUpdateKeepsWaitingAfterLibraryTrackUpdatedMsg(t *testing.T) {
+	scanCh := make(chan library.ScanEvent)
+	model := NewModel([]library.Track{{
+		Trackname: "song.mp3",
+		Path:      "/music/song.mp3",
+		Filename:  "song.mp3",
+	}}, search.New(search.MockSource{}), scanCh)
+
+	updatedModel, cmd := model.Update(libraryTrackUpdatedMsg{
+		track: library.Track{
+			Trackname: "Artist - Title",
+			Path:      "/music/song.mp3",
+			Filename:  "song.mp3",
+			Artist:    "Artist",
+		},
+	})
+
+	got := updatedModel.(Model)
+	if got.tracks[0].Artist != "Artist" {
+		t.Fatalf("expected updated artist %q, got %q", "Artist", got.tracks[0].Artist)
+	}
+	if cmd == nil {
+		t.Fatal("expected Update to keep waiting for the next background scan event")
+	}
+}
+
 func TestWaitForLibraryEventPrefersTrackUpdateOverErrorWhenTrackPresent(t *testing.T) {
 	ch := make(chan library.ScanEvent, 1)
 	track := library.Track{
