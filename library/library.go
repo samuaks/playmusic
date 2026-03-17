@@ -7,7 +7,6 @@ import (
 	. "playmusic/decoder"
 	. "playmusic/helpers"
 	"strings"
-	"sync"
 	"time"
 )
 
@@ -28,16 +27,19 @@ func (t Track) FormatDuration() string {
 }
 
 func LoadLibrary(dir string) ([]Track, error) {
-	return loadFromDir(dir)
+	return loadFromDir(dir, make(map[string]struct{}), make(map[string]struct{}))
 }
 
 func LoadLibraries(dirs ...string) ([]Track, error) {
 	var tracks []Track
+	seenPaths := make(map[string]struct{})
+	seenSignatures := make(map[string]struct{})
+
 	for _, dir := range dirs {
 		if strings.TrimSpace(dir) == "" {
 			continue
 		}
-		scanned, err := loadFromDir(dir)
+		scanned, err := loadFromDir(dir, seenPaths, seenSignatures)
 		if err != nil {
 			if os.IsNotExist(err) {
 				continue
@@ -49,7 +51,7 @@ func LoadLibraries(dirs ...string) ([]Track, error) {
 	if len(tracks) == 0 {
 		return nil, nil
 	}
-	return sortingOfTracks(deduplicateTracks(enrichTracks(tracks))), nil
+	return sortingOfTracks(tracks), nil
 }
 
 func DefaultLibraryDirs() []string {
@@ -87,7 +89,7 @@ func LoadDefaultLibrary() ([]Track, error) {
 	return LoadLibraries(DefaultLibraryDirs()...)
 }
 
-func loadFromDir(dir string) ([]Track, error) {
+func loadFromDir(dir string, seenPaths, seenSignatures map[string]struct{}) ([]Track, error) {
 	var tracks []Track
 
 	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, walkErr error) error {
@@ -98,14 +100,30 @@ func loadFromDir(dir string) ([]Track, error) {
 			return nil
 		}
 
-		tracks = append(tracks, BuildDiscoveredTrack(path))
+		pathKey := normalizedPathKey(path)
+		if _, exists := seenPaths[pathKey]; exists {
+			return nil
+		}
+		seenPaths[pathKey] = struct{}{}
+
+		sigKey, sigErr := fileSignatureKey(d)
+		if sigErr == nil && sigKey != "" {
+			if _, exists := seenSignatures[sigKey]; exists {
+				return nil
+			}
+			seenSignatures[sigKey] = struct{}{}
+		}
+
+		discovered := BuildDiscoveredTrack(path)
+		enriched, _ := EnrichTrack(discovered)
+		tracks = append(tracks, enriched)
 		return nil
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	return deduplicateTracks(enrichTracks(tracks)), nil
+	return tracks, nil
 }
 
 func uniqueDirs(dirs []string) []string {
@@ -120,46 +138,4 @@ func uniqueDirs(dirs []string) []string {
 		uniq = append(uniq, cleaned)
 	}
 	return uniq
-}
-
-func enrichTracks(tracks []Track) []Track {
-	var wg sync.WaitGroup
-
-	for i := range tracks {
-		wg.Add(1)
-		go func(idx int) {
-			defer wg.Done()
-			enriched, _ := EnrichTrack(tracks[idx])
-			tracks[idx] = enriched
-		}(i)
-	}
-
-	wg.Wait()
-	return tracks
-}
-
-func deduplicateTracks(tracks []Track) []Track {
-	var wg sync.WaitGroup
-	hashes := make([]string, len(tracks))
-
-	for i := range tracks {
-		wg.Add(1)
-		go func(idx int, t Track) {
-			defer wg.Done()
-			hashes[idx], _ = hashFile(t.Path)
-		}(i, tracks[i])
-	}
-
-	wg.Wait()
-
-	seen := make(map[string]bool)
-	uniqueTracks := tracks[:0]
-	for i, track := range tracks {
-		if hashes[i] == "" || seen[hashes[i]] {
-			continue
-		}
-		seen[hashes[i]] = true
-		uniqueTracks = append(uniqueTracks, track)
-	}
-	return uniqueTracks
 }

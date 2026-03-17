@@ -6,8 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	. "playmusic/decoder"
-	"runtime"
-	"strconv"
 	"strings"
 )
 
@@ -24,22 +22,6 @@ const (
 	ScanEventEnriched
 	ScanEventDone
 )
-
-func normalizedPathKey(path string) string {
-	cleaned := filepath.Clean(path)
-	if runtime.GOOS == "windows" {
-		return strings.ToLower(cleaned)
-	}
-	return cleaned
-}
-
-func fileSignatureKey(d fs.DirEntry) (string, error) {
-	info, err := d.Info()
-	if err != nil {
-		return "", err
-	}
-	return strings.ToLower(d.Name()) + ":" + strconv.FormatInt(info.Size(), 10), nil
-}
 
 /*
 ScanForMedia scans the provided directories in the background and emits
