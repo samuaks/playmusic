@@ -65,6 +65,24 @@ func DefaultLibraryDirs() []string {
 	return uniqueDirs(dirs)
 }
 
+/*  BackgroundLibraryDirs returns the directories that should be scanned
+	after the TUI has already started. The local Media directory is excluded
+	so startup stays fast and we do not scan the same source twice.*/
+	
+func BackgroundLibraryDirs() []string {
+	var dirs []string
+	mediaDir := filepath.Clean("Media")
+
+	for _, dir := range DefaultLibraryDirs() {
+		if filepath.Clean(dir) == mediaDir {
+			continue
+		}
+		dirs = append(dirs, dir)
+	}
+
+	return dirs
+}
+
 func LoadDefaultLibrary() ([]Track, error) {
 	return LoadLibraries(DefaultLibraryDirs()...)
 }
