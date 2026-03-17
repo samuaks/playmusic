@@ -214,6 +214,26 @@ func TestScanForMediaStopsWhenContextCanceled(t *testing.T) {
 	}
 }
 
+func TestScanForMediaSignalsCompletionByClosingChannel(t *testing.T) {
+	dir := t.TempDir()
+
+	if err := os.WriteFile(filepath.Join(dir, "song.mp3"), []byte("content"), 0644); err != nil {
+		t.Fatalf("failed to write track: %v", err)
+	}
+
+	ch := make(chan ScanEvent)
+	go ScanForMedia(context.Background(), []string{dir}, ch)
+
+	count := 0
+	for range ch {
+		count++
+	}
+
+	if count != 2 {
+		t.Fatalf("expected discovered and enriched events before close, got %d", count)
+	}
+}
+
 func TestScanForMediaSkipsDuplicateFilenameAndSizeBeforeEnrichment(t *testing.T) {
 	root := t.TempDir()
 	dirA := filepath.Join(root, "a")

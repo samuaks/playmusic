@@ -20,15 +20,11 @@ type ScanEventType int
 const (
 	ScanEventDiscovered ScanEventType = iota
 	ScanEventEnriched
-	ScanEventDone
 )
 
-/*
-ScanForMedia scans the provided directories in the background and emits
-
-	discovered tracks one by one into out. The channel is closed when scanning
-	finishes. Missing directories are skipped.
-*/
+// ScanForMedia scans the provided directories in the background and emits
+// discovered and enriched tracks one by one into out. The channel is closed
+// when scanning finishes. Missing directories are skipped.
 func ScanForMedia(ctx context.Context, dirs []string, out chan<- ScanEvent) {
 	defer close(out)
 	seenPaths := make(map[string]struct{})
