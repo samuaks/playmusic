@@ -111,6 +111,10 @@ type Model struct {
 	searching   bool
 	searchQuery string
 	scanCh      <-chan library.ScanEvent
+	scanning    bool
+	scanDone    bool
+	scanError   error
+	scanAdded   int
 }
 
 func NewModel(tracks []library.Track, searcher *search.Searcher, scanCh <-chan library.ScanEvent) Model {
@@ -141,6 +145,7 @@ func NewModel(tracks []library.Track, searcher *search.Searcher, scanCh <-chan l
 		searcher: searcher,
 		spinner:  s,
 		scanCh:   scanCh,
+		scanning: scanCh != nil,
 	}
 
 }
@@ -301,6 +306,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// may overlap or the scanner may revisit the same location.
 		if m.trackIndexByPath(msg.track.Path) == -1 {
 			m.tracks = append(m.tracks, msg.track)
+			m.scanAdded++
 			m.updateListItems()
 		}
 		return m, waitForLibraryEvent(m.scanCh)
@@ -314,8 +320,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.updateListItems()
 		return m, waitForLibraryEvent(m.scanCh)
 	case libraryScanErrorMsg:
+		m.scanError = msg.err
 		return m, waitForLibraryEvent(m.scanCh)
 	case libraryScanDoneMsg:
+		m.scanning = false
+		m.scanDone = true
 		return m, nil
 	case searchDoneMsg:
 		m.searching = false
@@ -328,8 +337,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) View() string {
-	return fmt.Sprintf("%s\n%s\n%s",
+	return fmt.Sprintf("%s\n%s\n%s\n%s",
 		m.searchBarView(),
+		m.libraryScanStatusView(),
 		m.list.View(),
 		m.playerBarView())
 

@@ -2,6 +2,7 @@ package tui
 
 import (
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -145,7 +146,11 @@ func TestModelUpdateKeepsWaitingAfterLibraryScanError(t *testing.T) {
 		err: errors.New("scan failed"),
 	})
 
-	_ = updatedModel.(Model)
+	got := updatedModel.(Model)
+
+	if got.scanError == nil {
+		t.Fatal("expected scan error to be stored in model")
+	}
 
 	if cmd == nil {
 		t.Fatal("expected Update to keep waiting after a scan error")
@@ -157,10 +162,67 @@ func TestModelUpdateStopsWaitingWhenLibraryScanDone(t *testing.T) {
 
 	updatedModel, cmd := model.Update(libraryScanDoneMsg{})
 
-	_ = updatedModel.(Model)
+	got := updatedModel.(Model)
+
+	if got.scanning {
+		t.Fatal("expected scanning to be disabled after completion")
+	}
+	if !got.scanDone {
+		t.Fatal("expected scanDone to be set after completion")
+	}
 
 	if cmd != nil {
 		t.Fatal("expected no follow-up command after scan completion")
+	}
+}
+
+func TestModelUpdateTracksAddedFromBackgroundScan(t *testing.T) {
+	model := NewModel(nil, search.New(search.MockSource{}), make(chan library.ScanEvent))
+
+	updatedModel, _ := model.Update(libraryTrackFoundMsg{
+		track: library.Track{
+			Trackname: "New Track",
+			Path:      "/music/new.mp3",
+			Filename:  "new.mp3",
+		},
+	})
+
+	got := updatedModel.(Model)
+	if got.scanAdded != 1 {
+		t.Fatalf("expected scanAdded to increment, got %d", got.scanAdded)
+	}
+}
+
+func TestLibraryScanStatusViewShowsActiveState(t *testing.T) {
+	model := NewModel(nil, search.New(search.MockSource{}), make(chan library.ScanEvent))
+	model.scanning = true
+	model.scanAdded = 2
+
+	view := model.libraryScanStatusView()
+	if !strings.Contains(view, "Scanning library") {
+		t.Fatalf("expected active scan status, got %q", view)
+	}
+}
+
+func TestLibraryScanStatusViewShowsDoneState(t *testing.T) {
+	model := NewModel(nil, search.New(search.MockSource{}), nil)
+	model.scanDone = true
+	model.scanAdded = 3
+
+	view := model.libraryScanStatusView()
+	if !strings.Contains(view, "Library scan complete") {
+		t.Fatalf("expected done scan status, got %q", view)
+	}
+}
+
+func TestLibraryScanStatusViewShowsWarningState(t *testing.T) {
+	model := NewModel(nil, search.New(search.MockSource{}), make(chan library.ScanEvent))
+	model.scanning = true
+	model.scanError = errors.New("scan failed")
+
+	view := model.libraryScanStatusView()
+	if !strings.Contains(view, "warning") {
+		t.Fatalf("expected warning scan status, got %q", view)
 	}
 }
 
