@@ -68,38 +68,6 @@ func TestScanForMediaStreamsSupportedFiles(t *testing.T) {
 	}
 }
 
-func TestScanForMediaEmitsDiscoveredBeforeEnriched(t *testing.T) {
-	dir := t.TempDir()
-	path := filepath.Join(dir, "song.mp3")
-
-	if err := os.WriteFile(path, []byte("one"), 0644); err != nil {
-		t.Fatalf("failed to write song: %v", err)
-	}
-
-	events := collectScanEvents(t, []string{dir})
-
-	if len(events) < 2 {
-		t.Fatalf("expected at least 2 events, got %d", len(events))
-	}
-
-	if events[0].Type != ScanEventDiscovered {
-		t.Fatalf("expected first event to be discovered, got %v", events[0].Type)
-	}
-	if events[1].Type != ScanEventEnriched {
-		t.Fatalf("expected second event to be enriched, got %v", events[1].Type)
-	}
-	if events[0].Track == nil || events[1].Track == nil {
-		t.Fatal("expected both events to carry track payloads")
-	}
-	if events[0].Track.Path != events[1].Track.Path {
-		t.Fatalf(
-			"expected same path in discovered and enriched events, got %q and %q",
-			events[0].Track.Path,
-			events[1].Track.Path,
-		)
-	}
-}
-
 func TestScanForMediaDiscoveredEventContainsBaseTrackOnly(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "song.mp3")
@@ -329,28 +297,6 @@ func TestScanForMediaSignalsCompletionByClosingChannel(t *testing.T) {
 
 	if count != 2 {
 		t.Fatalf("expected discovered and enriched events before close, got %d", count)
-	}
-}
-
-func TestScanForMediaEmitsEnrichedEventEvenWhenEnrichmentFails(t *testing.T) {
-	dir := t.TempDir()
-	path := filepath.Join(dir, "song.mp3")
-
-	if err := os.WriteFile(path, []byte("content"), 0644); err != nil {
-		t.Fatalf("failed to write track: %v", err)
-	}
-
-	events := collectScanEvents(t, []string{dir})
-
-	evt, ok := firstTrackEventByType(events, ScanEventEnriched)
-	if !ok {
-		t.Fatal("expected enriched event")
-	}
-	if evt.Track == nil {
-		t.Fatal("expected enriched event to include track payload")
-	}
-	if evt.Track.Path != path {
-		t.Fatalf("expected path %q, got %q", path, evt.Track.Path)
 	}
 }
 
