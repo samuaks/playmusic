@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestProcessCandidateSeparatesDiscoveryFromEnrichment(t *testing.T) {
+func TestBuildAndEnrichTrackPreserveIdentity(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "song.mp3")
 
@@ -22,35 +22,29 @@ func TestProcessCandidateSeparatesDiscoveryFromEnrichment(t *testing.T) {
 		t.Fatalf("expected 1 dir entry, got %d", len(entry))
 	}
 
-	candidate := processCandidate(
-		newScanState(make(map[string]struct{}), make(map[string]struct{})),
-		path,
-		entry[0],
-	)
+	discovered := BuildDiscoveredTrack(path)
+	enriched, _ := EnrichTrack(discovered)
 
-	if !candidate.include {
-		t.Fatal("expected candidate to be included")
+	if discovered.Path != path {
+		t.Fatalf("expected discovered path %q, got %q", path, discovered.Path)
 	}
-	if candidate.discovered.Path != path {
-		t.Fatalf("expected discovered path %q, got %q", path, candidate.discovered.Path)
+	if discovered.Filename != "song.mp3" {
+		t.Fatalf("expected discovered filename song.mp3, got %q", discovered.Filename)
 	}
-	if candidate.discovered.Filename != "song.mp3" {
-		t.Fatalf("expected discovered filename song.mp3, got %q", candidate.discovered.Filename)
+	if discovered.Duration != 0 {
+		t.Fatalf("expected discovered track to have zero duration, got %v", discovered.Duration)
 	}
-	if candidate.discovered.Duration != 0 {
-		t.Fatalf("expected discovered track to have zero duration, got %v", candidate.discovered.Duration)
+	if enriched.Path != discovered.Path {
+		t.Fatalf("expected enriched path %q, got %q", discovered.Path, enriched.Path)
 	}
-	if candidate.enriched.Path != candidate.discovered.Path {
-		t.Fatalf("expected enriched path %q, got %q", candidate.discovered.Path, candidate.enriched.Path)
-	}
-	if candidate.enriched.Filename != candidate.discovered.Filename {
+	if enriched.Filename != discovered.Filename {
 		t.Fatalf(
 			"expected enriched filename %q, got %q",
-			candidate.discovered.Filename,
-			candidate.enriched.Filename,
+			discovered.Filename,
+			enriched.Filename,
 		)
 	}
-	if candidate.enriched.Trackname == "" {
+	if enriched.Trackname == "" {
 		t.Fatal("expected enriched trackname to stay populated")
 	}
 }

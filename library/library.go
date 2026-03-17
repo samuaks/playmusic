@@ -98,12 +98,13 @@ func loadFromDir(dir string, seenPaths, seenSignatures map[string]struct{}) ([]T
 			return walkErr
 		}
 
-		candidate := processCandidate(state, path, d)
-		if !candidate.include {
+		if !state.shouldInclude(path, d) {
 			return nil
 		}
 
-		tracks = append(tracks, candidate.enriched)
+		discovered := BuildDiscoveredTrack(path)
+		enriched, _ := EnrichTrack(discovered)
+		tracks = append(tracks, enriched)
 		return nil
 	})
 	if err != nil {

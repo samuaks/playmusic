@@ -58,27 +58,30 @@ func ScanForMedia(ctx context.Context, dirs []string, out chan<- ScanEvent) {
 			default:
 			}
 
-			candidate := processCandidate(state, path, d)
-			if !candidate.include {
+			if !state.shouldInclude(path, d) {
 				return nil
 			}
+
+			discovered := BuildDiscoveredTrack(path)
 
 			select {
 			case <-ctx.Done():
 				return ctx.Err()
 			case out <- ScanEvent{
 				Type:  ScanEventDiscovered,
-				Track: &candidate.discovered,
+				Track: &discovered,
 			}:
 			}
+
+			enriched, enrichErr := EnrichTrack(discovered)
 
 			select {
 			case <-ctx.Done():
 				return ctx.Err()
 			case out <- ScanEvent{
 				Type:  ScanEventEnriched,
-				Track: &candidate.enriched,
-				Err:   candidate.enrichErr,
+				Track: &enriched,
+				Err:   enrichErr,
 			}:
 				return nil
 			}

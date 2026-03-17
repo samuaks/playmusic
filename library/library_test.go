@@ -135,7 +135,7 @@ func TestLoadLibraryKeepsSameSizeFilesWithDifferentNames(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if len(tracks) != 3 {
-		t.Errorf("expected 3 tracks because dedup no longer hashes file content, got %d", len(tracks))
+		t.Errorf("expected 3 tracks because same-size files with different names should remain distinct, got %d", len(tracks))
 	}
 }
 
