@@ -11,21 +11,24 @@ import (
 )
 
 func main() {
-	tracks, err := lib.LoadDefaultLibrary()
+	// Load the local Media directory synchronously so the TUI can start fast
+	// with an immediate playlist even on cold startup.
+	tracks, err := lib.LoadLibrary("Media")
 	if err != nil {
 		fmt.Printf("Error loading library: %v\n", err)
 		return
 	}
 
-	if len(tracks) == 0 {
-		fmt.Println("No tracks found in Media/ or default Music folder")
-		return
-	}
-
 	searcher := search.New(search.MockSource{})
 
+	// Scan the rest of the library in the background and stream tracks into the TUI.
+	scanCh := make(chan lib.Track)
+	go lib.ScanForMedia(lib.BackgroundLibraryDirs(), scanCh)
+
 	ui := tea.NewProgram(
-		tui.NewModel(tracks, searcher), tea.WithAltScreen())
+		tui.NewModel(tracks, searcher, scanCh),
+		tea.WithAltScreen(),
+	)
 
 	if _, err := ui.Run(); err != nil {
 		fmt.Printf("Error: %v\n", err)
