@@ -48,6 +48,8 @@ func (s *scanState) shouldInclude(path string, d fs.DirEntry) bool {
 	}
 	s.seenPaths[pathKey] = struct{}{}
 
+	// Use a cheap filename+size heuristic before enrichment so obvious
+	// duplicates are filtered without hashing whole files on the startup path.
 	sigKey, sigErr := fileSignatureKey(d)
 	if sigErr == nil && sigKey != "" {
 		if _, exists := s.seenSignatures[sigKey]; exists {
