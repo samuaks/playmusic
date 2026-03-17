@@ -2,12 +2,14 @@ package decoder
 
 import (
 	"bytes"
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"playmusic/yt_dlp"
 	"strconv"
 	"strings"
 	"time"
@@ -156,25 +158,65 @@ func decodeWithFFmpeg(path string) (beep.StreamSeekCloser, beep.Format, error) {
 	return &tempFileStreamer{StreamSeekCloser: streamer, path: tmpPath}, format, nil
 }
 
-func decodeStreamUrl(url string) (beep.StreamSeekCloser, beep.Format, error) {
-	cmd := exec.Command("ffmpeg", "-i", url, "-f", "wav", "-")
-
-	cmd.Stderr = io.Discard
-	stdout, err := cmd.StdoutPipe()
+// it is actual streaming: yt-dlp returns stream with bytes and ffmpeg decodes it on the fly,
+// so there is no need to wait until the whole file is downloaded
+func DecodeStreamUrl(url string) (beep.Streamer, beep.Format, func(), error) {
+	ytdlpOut, ytdlpCmd, err := yt_dlp.GetAudioStreamPipe(url)
 	if err != nil {
-		return nil, beep.Format{}, err
+		return nil, beep.Format{}, nil, err
 	}
 
-	if err := cmd.Start(); err != nil {
-		return nil, beep.Format{}, err
-	}
+	ffmpeg := exec.Command(
+		"ffmpeg",
+		"-i", "pipe:0",
+		"-f", "s16le",
+		"-ac", "2",
+		"-ar", "44100",
+		"pipe:1",
+	)
+	ffmpeg.Stderr = io.Discard
+	ffmpeg.Stdin = ytdlpOut
 
-	stream, format, err := wav.Decode(stdout)
+	ffmpegOut, err := ffmpeg.StdoutPipe()
 	if err != nil {
-		return nil, beep.Format{}, err
+		return nil, beep.Format{}, nil, err
 	}
 
-	return stream, format, nil
+	closeFn := func() {
+		closePipeKillProcess(ytdlpOut, ytdlpCmd)
+		closePipeKillProcess(ffmpegOut, ffmpeg)
+	}
+
+	if err := ffmpeg.Start(); err != nil {
+		return nil, beep.Format{}, closeFn, err
+	}
+
+	// PCM format: 44100 Hz, 2 channels, signed 16-bit
+	format := beep.Format{
+		SampleRate:  44100,
+		NumChannels: 2,
+		Precision:   2,
+	}
+
+	//making a streamer that reads from ffmpeg's output and converts it to beep's format
+	streamer := beep.StreamerFunc(func(samples [][2]float64) (n int, ok bool) {
+		buf := make([]byte, len(samples)*4)
+		read, err := ffmpegOut.Read(buf)
+		if err != nil {
+			return 0, false
+		}
+		n = read / 4
+
+		for i := 0; i < n; i++ {
+			left := int16(binary.LittleEndian.Uint16(buf[i*4 : i*4+2]))
+			right := int16(binary.LittleEndian.Uint16(buf[i*4+2 : i*4+4]))
+			samples[i][0] = float64(left) / (1 << 15)
+			samples[i][1] = float64(right) / (1 << 15)
+		}
+		return n, true
+	})
+
+	return streamer, format, closeFn, nil
 }
 
 type tempFileStreamer struct {
@@ -236,4 +278,17 @@ func probeWithFFprobe(path string) (time.Duration, error) {
 	}
 
 	return time.Duration(seconds * float64(time.Second)), nil
+}
+
+func closePipeKillProcess(pipe io.ReadCloser, cmd *exec.Cmd) {
+	// closing pipe
+	if pipe != nil {
+		pipe.Close()
+	}
+
+	// killing process
+	if cmd != nil && cmd.Process != nil {
+		cmd.Process.Kill()
+		_ = cmd.Wait()
+	}
 }

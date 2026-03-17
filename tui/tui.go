@@ -30,7 +30,7 @@ type newTrackMsg struct {
 type searchDoneMsg struct{}
 
 func debounceSearch(query string) tea.Cmd {
-	return tea.Tick(500*time.Millisecond, func(t time.Time) tea.Msg {
+	return tea.Tick(1*time.Second, func(t time.Time) tea.Msg {
 		return searchDebounceMsg{query}
 	})
 }
@@ -96,12 +96,19 @@ func tick() tea.Cmd {
 func (m Model) playCurrent() tea.Cmd {
 	track := m.tracks[m.current]
 	player := m.player
+
 	return func() tea.Msg {
-		if err := player.Play(track.Path); err != nil {
+		var err error
+		if track.YTVideoURl != "" {
+			err = player.PlayFromSearch(track.YTVideoURl)
+		} else {
+			err = player.Play(track.Path)
+		}
+		if err != nil {
+			fmt.Println("Error playing track:", err)
 			return trackDoneMsg{}
 		}
-		<-player.Done()
-		return trackDoneMsg{}
+		return nil
 	}
 }
 
@@ -165,11 +172,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		case "enter":
 			if _, idx, ok := m.selectedTrack(); ok && idx != m.current {
+				m.player.Stop()
 				m.elapsed = 0
 				m.paused = false
 				m.current = idx
 				m.list.SetDelegate(newDelegate(m.tracks[m.current].Path, m.searchQuery))
-				m.player.Next()
+				// m.player.Next()
 				return m, m.playCurrent()
 			}
 		case "backspace":
@@ -218,7 +226,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.searching = false
 		m.list.SetSize(m.width, m.height-playerBarHeight-searchBarHeight)
 		for _, t := range m.tracks {
-			if t.Path == msg.track.Path {
+			if t.Identifier() == msg.track.Identifier() {
 				return m, nil
 			}
 		}

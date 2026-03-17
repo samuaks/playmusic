@@ -8,10 +8,8 @@ import (
 	lib "playmusic/library"
 	"playmusic/search"
 	"playmusic/tui"
-	"playmusic/ytapi"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/joho/godotenv"
 	"github.com/lrstanley/go-ytdlp"
 )
 
@@ -31,11 +29,7 @@ func main() {
 		return
 	}
 
-	searcher, err := initiateClientsAndSearch()
-	if err != nil {
-		fmt.Println("Search disabled:", err)
-		searcher = search.New(search.MockSource{})
-	}
+	searcher := search.New(search.YTSource{})
 
 	ui := tea.NewProgram(
 		tui.NewModel(tracks, searcher),
@@ -46,22 +40,6 @@ func main() {
 		fmt.Printf("Error: %v\n", err)
 		os.Exit(1)
 	}
-}
-
-func initiateClientsAndSearch() (*search.Searcher, error) {
-	//loading .env for global variables
-	if err := godotenv.Load(); err != nil {
-		fmt.Println("No .env file found")
-	}
-
-	err := ytapi.InitiateYTClient()
-	if err != nil {
-		return nil, err
-	}
-
-	searcher := search.New(search.YTSource{})
-
-	return searcher, nil
 }
 
 // fmt.Printf("Loaded %d tracks:\n", len(tracks))
