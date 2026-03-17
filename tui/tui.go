@@ -2,7 +2,7 @@ package tui
 
 import (
 	"fmt"
-	. "playmusic/library"
+	"playmusic/library"
 	. "playmusic/player"
 	"playmusic/search"
 	"time"
@@ -18,7 +18,7 @@ import (
 type tickMsg time.Time
 type trackDoneMsg struct{}
 type trackItem struct {
-	track Track
+	track library.Track
 }
 
 type searchDebounceMsg struct {
@@ -26,13 +26,18 @@ type searchDebounceMsg struct {
 }
 // searchTrackFoundMsg carries a track returned by the search subsystem.
 type searchTrackFoundMsg struct {
-	track Track
+	track library.Track
 }
 
 // libraryTrackFoundMsg delivers a track discovered by the background
 // library scan into the Bubble Tea update loop.
 type libraryTrackFoundMsg struct {
-	track Track
+	track library.Track
+}
+
+// libraryScanErrorMsg reports a non-fatal background scan error.
+type libraryScanErrorMsg struct {
+	err error
 }
 
 // libraryScanDoneMsg signals that the background library scan has finished.
@@ -46,19 +51,25 @@ func debounceSearch(query string) tea.Cmd {
 	})
 }
 
-// waitForScannedTrack blocks until the next background-scanned track arrives.
+// waitForLibraryEvent blocks until the next background-scanned track arrives.
 // if the scan channel is closed, it emits a completion message instead
-func waitForScannedTrack(ch <-chan Track) tea.Cmd {
+func waitForLibraryEvent(ch <-chan library.ScanEvent) tea.Cmd {
 	if ch == nil {
 		return nil
 	}
 
 	return func() tea.Msg {
-		track, ok := <-ch
+		evt, ok := <-ch
 		if !ok {
 			return libraryScanDoneMsg{}
 		}
-		return libraryTrackFoundMsg{track: track}
+		if evt.Err != nil {
+			return libraryScanErrorMsg{err: evt.Err}
+		}
+		if evt.Track != nil {
+			return libraryTrackFoundMsg{track: *evt.Track}
+		}
+		return libraryScanDoneMsg{}
 	}
 }
 
@@ -68,7 +79,7 @@ func (t trackItem) Description() string { return t.track.FormatDuration() }
 func (t trackItem) FilterValue() string { return t.track.Trackname }
 
 type Model struct {
-	tracks      []Track
+	tracks      []library.Track
 	current     int
 	elapsed     time.Duration
 	paused      bool
@@ -81,10 +92,10 @@ type Model struct {
 	spinner     spinner.Model
 	searching   bool
 	searchQuery string
-	scanCh      <-chan Track
+	scanCh      <-chan library.ScanEvent
 }
 
-func NewModel(tracks []Track, searcher *search.Searcher, scanCh <-chan Track) Model {
+func NewModel(tracks []library.Track, searcher *search.Searcher, scanCh <-chan library.ScanEvent) Model {
 	items := make([]list.Item, len(tracks))
 
 	for i, t := range tracks {
@@ -134,17 +145,17 @@ func (m Model) playCurrent() tea.Cmd {
 	}
 }
 
-func (m Model) selectedTrack() (Track, int, bool) {
+func (m Model) selectedTrack() (library.Track, int, bool) {
 	item, ok := m.list.SelectedItem().(trackItem)
 	if !ok {
-		return Track{}, 0, false
+		return library.Track{}, 0, false
 	}
 	for i, t := range m.tracks {
 		if t.Path == item.track.Path {
 			return t, i, true
 		}
 	}
-	return Track{}, 0, false
+	return library.Track{}, 0, false
 }
 
 func (m Model) runSearch(query string) tea.Cmd {
@@ -165,7 +176,7 @@ func (m Model) Init() tea.Cmd {
 
 	return tea.Batch(
 		tick(),
-		waitForScannedTrack(m.scanCh),
+		waitForLibraryEvent(m.scanCh),
 	)
 }
 
@@ -263,12 +274,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// may overlap or the scanner may revisit the same location.
 		for _, t := range m.tracks {
 			if t.Path == msg.track.Path {
-				return m, waitForScannedTrack(m.scanCh)
+				return m, waitForLibraryEvent(m.scanCh)
 			}
 		}
 		m.tracks = append(m.tracks, msg.track)
 		m.updateListItems()
-		return m, waitForScannedTrack(m.scanCh)
+		return m, waitForLibraryEvent(m.scanCh)
+	case libraryScanErrorMsg:
+		return m, waitForLibraryEvent(m.scanCh)
 	case libraryScanDoneMsg:
 		return m, nil
 	case searchDoneMsg:

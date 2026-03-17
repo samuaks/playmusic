@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"errors"
 	"testing"
 
 	"playmusic/library"
@@ -16,7 +17,7 @@ func TestModelUpdateAddsLibraryTrackFoundMsg(t *testing.T) {
 		},
 	}
 
-	scanCh := make(chan library.Track)
+	scanCh := make(chan library.ScanEvent)
 	model := NewModel(initial, search.New(search.MockSource{}), scanCh)
 
 	updatedModel, cmd := model.Update(libraryTrackFoundMsg{
@@ -36,7 +37,7 @@ func TestModelUpdateAddsLibraryTrackFoundMsg(t *testing.T) {
 		t.Fatalf("expected new track path to be appended, got %q", got.tracks[1].Path)
 	}
 	if cmd == nil {
-		t.Fatal("expected Update to return a command that waits for the next scanned track")
+		t.Fatal("expected Update to return a command that waits for the next library event")
 	}
 }
 
@@ -49,7 +50,7 @@ func TestModelUpdateSkipsDuplicateLibraryTrackByPath(t *testing.T) {
 		},
 	}
 
-	scanCh := make(chan library.Track)
+	scanCh := make(chan library.ScanEvent)
 	model := NewModel(initial, search.New(search.MockSource{}), scanCh)
 
 	updatedModel, cmd := model.Update(libraryTrackFoundMsg{
@@ -66,6 +67,32 @@ func TestModelUpdateSkipsDuplicateLibraryTrackByPath(t *testing.T) {
 		t.Fatalf("expected duplicate path to be ignored, got %d tracks", len(got.tracks))
 	}
 	if cmd == nil {
-		t.Fatal("expected Update to keep waiting for the next scanned track")
+		t.Fatal("expected Update to keep waiting for the next library event")
+	}
+}
+
+func TestModelUpdateKeepsWaitingAfterLibraryScanError(t *testing.T) {
+	model := NewModel(nil, search.New(search.MockSource{}), make(chan library.ScanEvent))
+
+	updatedModel, cmd := model.Update(libraryScanErrorMsg{
+		err: errors.New("scan failed"),
+	})
+
+	_ = updatedModel.(Model)
+
+	if cmd == nil {
+		t.Fatal("expected Update to keep waiting after a scan error")
+	}
+}
+
+func TestModelUpdateStopsWaitingWhenLibraryScanDone(t *testing.T) {
+	model := NewModel(nil, search.New(search.MockSource{}), make(chan library.ScanEvent))
+
+	updatedModel, cmd := model.Update(libraryScanDoneMsg{})
+
+	_ = updatedModel.(Model)
+
+	if cmd != nil {
+		t.Fatal("expected no follow-up command after scan completion")
 	}
 }
