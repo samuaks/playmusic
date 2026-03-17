@@ -134,6 +134,9 @@ func TestModelUpdateAppendsUpdatedTrackWhenOriginalMissing(t *testing.T) {
 	if got.tracks[0].Path != "/music/song.mp3" {
 		t.Fatalf("expected appended updated track path, got %q", got.tracks[0].Path)
 	}
+	if got.scanAdded != 1 {
+		t.Fatalf("expected scanAdded to increment for appended update, got %d", got.scanAdded)
+	}
 	if cmd == nil {
 		t.Fatal("expected Update to keep waiting for the next library event")
 	}
@@ -363,5 +366,17 @@ func TestModelInitReturnsStartupCmd(t *testing.T) {
 
 	if cmd == nil {
 		t.Fatal("expected Init to return a startup command batch")
+	}
+}
+
+func TestNewModelSetsScanningStateFromChannel(t *testing.T) {
+	modelWithScan := NewModel(nil, search.New(search.MockSource{}), make(chan library.ScanEvent))
+	if !modelWithScan.scanning {
+		t.Fatal("expected model to start in scanning state when scan channel is provided")
+	}
+
+	modelWithoutScan := NewModel(nil, search.New(search.MockSource{}), nil)
+	if modelWithoutScan.scanning {
+		t.Fatal("expected model to start with scanning disabled when no scan channel is provided")
 	}
 }

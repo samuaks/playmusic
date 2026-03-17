@@ -316,6 +316,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.tracks[idx] = msg.track
 		} else {
 			m.tracks = append(m.tracks, msg.track)
+			m.scanAdded++
 		}
 		m.updateListItems()
 		return m, waitForLibraryEvent(m.scanCh)
