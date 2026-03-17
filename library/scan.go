@@ -5,7 +5,6 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	. "playmusic/decoder"
 	"strings"
 )
 
@@ -27,8 +26,7 @@ const (
 // when scanning finishes. Missing directories are skipped.
 func ScanForMedia(ctx context.Context, dirs []string, out chan<- ScanEvent) {
 	defer close(out)
-	seenPaths := make(map[string]struct{})
-	seenSignatures := make(map[string]struct{})
+	state := newScanState(make(map[string]struct{}), make(map[string]struct{}))
 
 	for _, dir := range dirs {
 		if strings.TrimSpace(dir) == "" {
@@ -50,9 +48,6 @@ func ScanForMedia(ctx context.Context, dirs []string, out chan<- ScanEvent) {
 				}
 				return nil
 			}
-			if d.IsDir() || !IsSupported(d.Name()) {
-				return nil
-			}
 
 			select {
 			case <-ctx.Done():
@@ -60,40 +55,27 @@ func ScanForMedia(ctx context.Context, dirs []string, out chan<- ScanEvent) {
 			default:
 			}
 
-			pathKey := normalizedPathKey(path)
-			if _, exists := seenPaths[pathKey]; exists {
+			candidate := processCandidate(state, path, d)
+			if !candidate.include {
 				return nil
 			}
-			seenPaths[pathKey] = struct{}{}
-
-			sigKey, sigErr := fileSignatureKey(d)
-			if sigErr == nil && sigKey != "" {
-				if _, exists := seenSignatures[sigKey]; exists {
-					return nil
-				}
-				seenSignatures[sigKey] = struct{}{}
-			}
-
-			discovered := BuildDiscoveredTrack(path)
 
 			select {
 			case <-ctx.Done():
 				return ctx.Err()
 			case out <- ScanEvent{
 				Type:  ScanEventDiscovered,
-				Track: &discovered,
+				Track: &candidate.discovered,
 			}:
 			}
-
-			enriched, enrichErr := EnrichTrack(discovered)
 
 			select {
 			case <-ctx.Done():
 				return ctx.Err()
 			case out <- ScanEvent{
 				Type:  ScanEventEnriched,
-				Track: &enriched,
-				Err:   enrichErr,
+				Track: &candidate.enriched,
+				Err:   candidate.enrichErr,
 			}:
 				return nil
 			}

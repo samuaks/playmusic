@@ -4,7 +4,6 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	. "playmusic/decoder"
 	. "playmusic/helpers"
 	"strings"
 	"time"
@@ -92,32 +91,19 @@ func LoadDefaultLibrary() ([]Track, error) {
 
 func loadFromDir(dir string, seenPaths, seenSignatures map[string]struct{}) ([]Track, error) {
 	var tracks []Track
+	state := newScanState(seenPaths, seenSignatures)
 
 	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return walkErr
 		}
-		if d.IsDir() || !IsSupported(d.Name()) {
+
+		candidate := processCandidate(state, path, d)
+		if !candidate.include {
 			return nil
 		}
 
-		pathKey := normalizedPathKey(path)
-		if _, exists := seenPaths[pathKey]; exists {
-			return nil
-		}
-		seenPaths[pathKey] = struct{}{}
-
-		sigKey, sigErr := fileSignatureKey(d)
-		if sigErr == nil && sigKey != "" {
-			if _, exists := seenSignatures[sigKey]; exists {
-				return nil
-			}
-			seenSignatures[sigKey] = struct{}{}
-		}
-
-		discovered := BuildDiscoveredTrack(path)
-		enriched, _ := EnrichTrack(discovered)
-		tracks = append(tracks, enriched)
+		tracks = append(tracks, candidate.enriched)
 		return nil
 	})
 	if err != nil {
