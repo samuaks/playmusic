@@ -18,7 +18,9 @@ func main() {
 	// with an immediate playlist even on cold startup.
 	tracks, err := lib.LoadLibrary(localMediaDir)
 	if err != nil {
-		fmt.Printf("Warning: failed to load local library: %v\n", err)
+		if !os.IsNotExist(err) {
+			fmt.Printf("Warning: failed to load local library: %v\n", err)
+		}
 		tracks = nil
 	}
 
