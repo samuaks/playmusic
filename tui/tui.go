@@ -172,12 +172,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		case "enter":
 			if _, idx, ok := m.selectedTrack(); ok && idx != m.current {
-				m.player.Stop()
 				m.elapsed = 0
 				m.paused = false
 				m.current = idx
 				m.list.SetDelegate(newDelegate(m.tracks[m.current].Path, m.searchQuery))
-				// m.player.Next()
+				m.player.Next()
 				return m, m.playCurrent()
 			}
 		case "backspace":

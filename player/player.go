@@ -86,7 +86,9 @@ func (p *Player) PlayFromSearch(url string) error {
 		close(p.done)
 	}))}
 
-	p.closeStreamFn = closeStream
+	p.closeStreamFn = func() {
+		go closeStream() //different goroutine to end the stream
+	}
 
 	speaker.Play(p.ctrl)
 	return nil

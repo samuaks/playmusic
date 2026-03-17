@@ -283,12 +283,18 @@ func probeWithFFprobe(path string) (time.Duration, error) {
 func closePipeKillProcess(pipe io.ReadCloser, cmd *exec.Cmd) {
 	// closing pipe
 	if pipe != nil {
-		pipe.Close()
+		err := pipe.Close()
+		if err != nil {
+			fmt.Println("Error closing pipe:", err)
+		}
 	}
 
 	// killing process
 	if cmd != nil && cmd.Process != nil {
 		cmd.Process.Kill()
-		_ = cmd.Wait()
+		err := cmd.Wait()
+		if err != nil {
+			fmt.Println("Error killing the command:", err)
+		}
 	}
 }
