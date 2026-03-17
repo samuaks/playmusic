@@ -56,7 +56,7 @@ func TestEnrichTrackPreservesIdentityFields(t *testing.T) {
 	}
 }
 
-func TestEnrichTrackUpdatesDisplayFieldsWhenMetadataAvailable(t *testing.T) {
+func TestEnrichTrackKeepsTrackUsableWhenMetadataIsUnavailable(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "song.mp3")
 

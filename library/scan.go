@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	. "playmusic/decoder"
-	. "playmusic/helpers"
 	"strings"
 )
 
@@ -63,25 +62,17 @@ func ScanForMedia(ctx context.Context, dirs []string, out chan<- ScanEvent) {
 			default:
 			}
 
-			name := d.Name()
-			metadata, _ := GetMetadata(path)
-			duration, _ := ProbeDuration(path)
-
-			track := Track{
-				Trackname: formatTrackName(metadata.Artist, metadata.Title, name),
-				Title:     metadata.Title,
-				Artist:    metadata.Artist,
-				Filename:  name,
-				Path:      path,
-				Duration:  duration,
-				Year:      metadata.Year,
-				Genre:     metadata.Genre,
-			}
+			track := BuildDiscoveredTrack(path)
+			track, enrichErr := EnrichTrack(track)
 
 			select {
 			case <-ctx.Done():
 				return ctx.Err()
-			case out <- ScanEvent{Track: &track}:
+			case out <- ScanEvent{
+				Type:  ScanEventEnriched,
+				Track: &track,
+				Err:   enrichErr,
+			}:
 				return nil
 			}
 		})

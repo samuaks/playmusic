@@ -49,7 +49,7 @@ func LoadLibraries(dirs ...string) ([]Track, error) {
 	if len(tracks) == 0 {
 		return nil, nil
 	}
-	return sortingOfTracks(enrichAndDeduplicate(tracks)), nil
+	return sortingOfTracks(deduplicateTracks(enrichTracks(tracks))), nil
 }
 
 func DefaultLibraryDirs() []string {
@@ -98,17 +98,14 @@ func loadFromDir(dir string) ([]Track, error) {
 			return nil
 		}
 
-		discovered := BuildDiscoveredTrack(path)
-		enriched, _ := EnrichTrack(discovered)
-
-		tracks = append(tracks, enriched)
+		tracks = append(tracks, BuildDiscoveredTrack(path))
 		return nil
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	return enrichAndDeduplicate(tracks), nil
+	return deduplicateTracks(enrichTracks(tracks)), nil
 }
 
 func uniqueDirs(dirs []string) []string {
@@ -125,17 +122,34 @@ func uniqueDirs(dirs []string) []string {
 	return uniq
 }
 
-func enrichAndDeduplicate(tracks []Track) []Track {
+func enrichTracks(tracks []Track) []Track {
 	var wg sync.WaitGroup
-	hashes := make([]string, len(tracks))
+
 	for i := range tracks {
 		wg.Add(1)
-		go func(idx int, t *Track) {
+		go func(idx int) {
 			defer wg.Done()
-			t.Duration, _ = ProbeDuration(t.Path)
-			hashes[idx], _ = hashFile(t.Path)
-		}(i, &tracks[i])
+			enriched, _ := EnrichTrack(tracks[idx])
+			tracks[idx] = enriched
+		}(i)
 	}
+
+	wg.Wait()
+	return tracks
+}
+
+func deduplicateTracks(tracks []Track) []Track {
+	var wg sync.WaitGroup
+	hashes := make([]string, len(tracks))
+
+	for i := range tracks {
+		wg.Add(1)
+		go func(idx int, t Track) {
+			defer wg.Done()
+			hashes[idx], _ = hashFile(t.Path)
+		}(i, tracks[i])
+	}
+
 	wg.Wait()
 
 	seen := make(map[string]bool)
