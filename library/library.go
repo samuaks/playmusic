@@ -28,6 +28,13 @@ func (t Track) FormatDuration() string {
 	return FormattedDuration(t.Duration)
 }
 
+func (t Track) Identifier() string {
+	if t.Path != "" {
+		return t.Path
+	}
+	return t.AudioStreamURL
+}
+
 func LoadLibrary(dir string) ([]Track, error) {
 	return loadFromDir(dir)
 }

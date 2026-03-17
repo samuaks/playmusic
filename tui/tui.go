@@ -218,7 +218,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.searching = false
 		m.list.SetSize(m.width, m.height-playerBarHeight-searchBarHeight)
 		for _, t := range m.tracks {
-			if t.Path == msg.track.Path {
+			if t.Identifier() == msg.track.Identifier() {
 				return m, nil
 			}
 		}
