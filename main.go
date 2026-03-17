@@ -18,8 +18,8 @@ func main() {
 	// with an immediate playlist even on cold startup.
 	tracks, err := lib.LoadLibrary(localMediaDir)
 	if err != nil {
-		fmt.Printf("Error loading library: %v\n", err)
-		return
+		fmt.Printf("Warning: failed to load local library: %v\n", err)
+		tracks = nil
 	}
 
 	searcher := search.New(search.MockSource{})
