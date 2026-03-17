@@ -1,22 +1,33 @@
 package library
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
 )
 
-func collectScannedTracks(t *testing.T, dirs []string) []Track {
+func collectScanEvents(t *testing.T, dirs []string) []ScanEvent {
 	t.Helper()
 
-	ch := make(chan Track)
-	go ScanForMedia(dirs, ch)
+	ch := make(chan ScanEvent)
+	go ScanForMedia(context.Background(), dirs, ch)
 
-	var tracks []Track
-	for track := range ch {
-		tracks = append(tracks, track)
+	var events []ScanEvent
+	for evt := range ch {
+		events = append(events, evt)
 	}
 
+	return events
+}
+
+func onlyTracks(events []ScanEvent) []Track {
+	var tracks []Track
+	for _, evt := range events {
+		if evt.Track != nil {
+			tracks = append(tracks, *evt.Track)
+		}
+	}
 	return tracks
 }
 
@@ -33,7 +44,8 @@ func TestScanForMediaStreamsSupportedFiles(t *testing.T) {
 		t.Fatalf("failed to write notes: %v", err)
 	}
 
-	tracks := collectScannedTracks(t, []string{dir})
+	events := collectScanEvents(t, []string{dir})
+	tracks := onlyTracks(events)
 
 	if len(tracks) != 2 {
 		t.Fatalf("expected 2 supported tracks, got %d", len(tracks))
@@ -51,7 +63,8 @@ func TestScanForMediaScansRecursively(t *testing.T) {
 		t.Fatalf("failed to write recursive track: %v", err)
 	}
 
-	tracks := collectScannedTracks(t, []string{root})
+	events := collectScanEvents(t, []string{root})
+	tracks := onlyTracks(events)
 
 	if len(tracks) != 1 {
 		t.Fatalf("expected 1 recursively discovered track, got %d", len(tracks))
@@ -68,10 +81,11 @@ func TestScanForMediaSkipsMissingDirs(t *testing.T) {
 		t.Fatalf("failed to write track: %v", err)
 	}
 
-	tracks := collectScannedTracks(t, []string{
+	events := collectScanEvents(t, []string{
 		filepath.Join(dir, "missing"),
 		dir,
 	})
+	tracks := onlyTracks(events)
 
 	if len(tracks) != 1 {
 		t.Fatalf("expected scanner to skip missing dir and return 1 track, got %d", len(tracks))
@@ -86,7 +100,8 @@ func TestScanForMediaPopulatesBasicTrackFields(t *testing.T) {
 		t.Fatalf("failed to write track: %v", err)
 	}
 
-	tracks := collectScannedTracks(t, []string{dir})
+	events := collectScanEvents(t, []string{dir})
+	tracks := onlyTracks(events)
 
 	if len(tracks) != 1 {
 		t.Fatalf("expected 1 track, got %d", len(tracks))
@@ -101,5 +116,19 @@ func TestScanForMediaPopulatesBasicTrackFields(t *testing.T) {
 	}
 	if track.Trackname == "" {
 		t.Fatal("expected Trackname to be populated")
+	}
+}
+
+func TestScanForMediaStopsWhenContextCanceled(t *testing.T) {
+	dir := t.TempDir()
+	ch := make(chan ScanEvent)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	go ScanForMedia(ctx, []string{dir}, ch)
+
+	for range ch {
+		t.Fatal("expected no events after cancellation")
 	}
 }
