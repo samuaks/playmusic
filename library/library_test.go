@@ -193,7 +193,7 @@ func TestBackgroundLibraryDirsExcludesMedia(t *testing.T) {
 	dirs := BackgroundLibraryDirs()
 
 	for _, dir := range dirs {
-		if filepath.Clean(dir) == filepath.Clean("Media") {
+		if filepath.Clean(dir) == filepath.Clean(mediaLibraryDir) {
 			t.Fatalf("Media directory must not be included in background scan dirs")
 		}
 	}
@@ -213,5 +213,15 @@ func TestBackgroundLibraryDirsAreSubsetOfDefaultDirs(t *testing.T) {
 		if _, ok := defaultSet[cleaned]; !ok {
 			t.Fatalf("background dir %q must be part of DefaultLibraryDirs()", dir)
 		}
+	}
+}
+
+func TestDefaultLibraryDirsStartsWithLocalMedia(t *testing.T) {
+	dirs := DefaultLibraryDirs()
+	if len(dirs) == 0 {
+		t.Fatal("expected at least the local Media directory")
+	}
+	if filepath.Clean(dirs[0]) != filepath.Clean(mediaLibraryDir) {
+		t.Fatalf("expected first default library dir to be %q, got %q", mediaLibraryDir, dirs[0])
 	}
 }

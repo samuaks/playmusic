@@ -10,6 +10,8 @@ import (
 	"time"
 )
 
+const mediaLibraryDir = "Media"
+
 type Track struct {
 	Trackname string
 	Artist    string
@@ -56,7 +58,7 @@ func LoadLibraries(dirs ...string) ([]Track, error) {
 
 func DefaultLibraryDirs() []string {
 	dirs := []string{
-		filepath.Clean("Media"),
+		filepath.Clean(mediaLibraryDir),
 	}
 
 	home, err := os.UserHomeDir()
@@ -67,13 +69,12 @@ func DefaultLibraryDirs() []string {
 	return uniqueDirs(dirs)
 }
 
-/*  BackgroundLibraryDirs returns the directories that should be scanned
-after the TUI has already started. The local Media directory is excluded
-so startup stays fast and we do not scan the same source twice.*/
-
+// BackgroundLibraryDirs returns the directories that should be scanned after
+// the TUI has already started. The local Media directory is excluded so
+// startup stays fast and we do not scan the same source twice.
 func BackgroundLibraryDirs() []string {
 	var dirs []string
-	mediaDir := filepath.Clean("Media")
+	mediaDir := filepath.Clean(mediaLibraryDir)
 
 	for _, dir := range DefaultLibraryDirs() {
 		if filepath.Clean(dir) == mediaDir {
