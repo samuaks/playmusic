@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	lib "playmusic/library"
@@ -21,9 +22,12 @@ func main() {
 
 	searcher := search.New(search.MockSource{})
 
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	// Scan the rest of the library in the background and stream tracks into the TUI.
-	scanCh := make(chan lib.Track)
-	go lib.ScanForMedia(lib.BackgroundLibraryDirs(), scanCh)
+	scanCh := make(chan lib.ScanEvent)
+	go lib.ScanForMedia(ctx, lib.BackgroundLibraryDirs(), scanCh)
 
 	ui := tea.NewProgram(
 		tui.NewModel(tracks, searcher, scanCh),
