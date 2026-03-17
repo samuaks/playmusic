@@ -125,3 +125,30 @@ func TestLoadLibrariesSkipsMissingAndDeduplicatesAcrossDirs(t *testing.T) {
 		t.Fatalf("expected 2 unique tracks, got %d", len(tracks))
 	}
 }
+
+func TestBackgroundLibraryDirsExcludesMedia(t *testing.T) {
+	dirs := BackgroundLibraryDirs()
+
+	for _, dir := range dirs {
+		if filepath.Clean(dir) == filepath.Clean("Media") {
+			t.Fatalf("Media directory must not be included in background scan dirs")
+		}
+	}
+}
+
+func TestBackgroundLibraryDirsAreSubsetOfDefaultDirs(t *testing.T) {
+	defaultDirs := DefaultLibraryDirs()
+	backgroundDirs := BackgroundLibraryDirs()
+
+	defaultSet := make(map[string]struct{}, len(defaultDirs))
+	for _, dir := range defaultDirs {
+		defaultSet[filepath.Clean(dir)] = struct{}{}
+	}
+
+	for _, dir := range backgroundDirs {
+		cleaned := filepath.Clean(dir)
+		if _, ok := defaultSet[cleaned]; !ok {
+			t.Fatalf("background dir %q must be part of DefaultLibraryDirs()", dir)
+		}
+	}
+}
