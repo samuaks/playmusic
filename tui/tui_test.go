@@ -344,6 +344,52 @@ func TestWaitForLibraryEventReturnsScanErrorMsg(t *testing.T) {
 	}
 }
 
+func TestWaitForLibraryEventReturnsErrorForMalformedEvent(t *testing.T) {
+	ch := make(chan library.ScanEvent, 1)
+	ch <- library.ScanEvent{}
+
+	cmd := waitForLibraryEvent(ch)
+	if cmd == nil {
+		t.Fatal("expected command for scan channel")
+	}
+
+	msg := cmd()
+	scanErr, ok := msg.(libraryScanErrorMsg)
+	if !ok {
+		t.Fatalf("expected libraryScanErrorMsg, got %T", msg)
+	}
+	if scanErr.err == nil || !strings.Contains(scanErr.err.Error(), "missing track and error") {
+		t.Fatalf("expected malformed event error, got %v", scanErr.err)
+	}
+}
+
+func TestWaitForLibraryEventReturnsErrorForUnknownEventType(t *testing.T) {
+	ch := make(chan library.ScanEvent, 1)
+	track := library.Track{
+		Trackname: "Found",
+		Path:      "/music/found.mp3",
+		Filename:  "found.mp3",
+	}
+	ch <- library.ScanEvent{
+		Type:  library.ScanEventType(99),
+		Track: &track,
+	}
+
+	cmd := waitForLibraryEvent(ch)
+	if cmd == nil {
+		t.Fatal("expected command for scan channel")
+	}
+
+	msg := cmd()
+	scanErr, ok := msg.(libraryScanErrorMsg)
+	if !ok {
+		t.Fatalf("expected libraryScanErrorMsg, got %T", msg)
+	}
+	if scanErr.err == nil || !strings.Contains(scanErr.err.Error(), "unknown library scan event type") {
+		t.Fatalf("expected unknown event type error, got %v", scanErr.err)
+	}
+}
+
 func TestWaitForLibraryEventReturnsScanDoneMsgWhenChannelClosed(t *testing.T) {
 	ch := make(chan library.ScanEvent)
 	close(ch)

@@ -74,7 +74,7 @@ func waitForLibraryEvent(ch <-chan library.ScanEvent) tea.Cmd {
 			if evt.Err != nil {
 				return libraryScanErrorMsg{err: evt.Err}
 			}
-			return libraryScanDoneMsg{}
+			return libraryScanErrorMsg{err: fmt.Errorf("library scan event missing track and error")}
 		}
 
 		switch evt.Type {
@@ -83,10 +83,7 @@ func waitForLibraryEvent(ch <-chan library.ScanEvent) tea.Cmd {
 		case library.ScanEventEnriched:
 			return libraryTrackUpdatedMsg{track: *evt.Track}
 		default:
-			if evt.Err != nil {
-				return libraryScanErrorMsg{err: evt.Err}
-			}
-			return libraryScanDoneMsg{}
+			return libraryScanErrorMsg{err: fmt.Errorf("unknown library scan event type: %d", evt.Type)}
 		}
 	}
 }

@@ -8,6 +8,8 @@ import (
 	"strings"
 )
 
+// ScanEvent carries either a discovered/enriched track or a non-fatal scan
+// error. Scan completion is signaled by closing the event channel.
 type ScanEvent struct {
 	Type  ScanEventType
 	Track *Track
@@ -22,8 +24,9 @@ const (
 )
 
 // ScanForMedia scans the provided directories in the background and emits
-// discovered and enriched tracks one by one into out. The channel is closed
-// when scanning finishes. Missing directories are skipped.
+// discovered and enriched tracks one by one into out. Non-fatal walk errors
+// are sent as events with Err set and Track nil. The channel is closed when
+// scanning finishes. Missing directories are skipped.
 func ScanForMedia(ctx context.Context, dirs []string, out chan<- ScanEvent) {
 	defer close(out)
 	state := newScanState(make(map[string]struct{}), make(map[string]struct{}))
