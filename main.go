@@ -3,17 +3,20 @@ package main
 import (
 	"context"
 	"fmt"
+
 	"os"
 	lib "playmusic/library"
 	"playmusic/search"
 	"playmusic/tui"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/lrstanley/go-ytdlp"
 )
 
-const localMediaDir = "Media"
-
 func main() {
+	ytdlp.MustInstall(context.TODO(), nil)
+	const localMediaDir = "Media"
+
 	// Load the local Media directory synchronously so the TUI can start fast
 	// with an immediate playlist even on cold startup.
 	tracks, err := lib.LoadLibrary(localMediaDir)
@@ -24,7 +27,7 @@ func main() {
 		tracks = nil
 	}
 
-	searcher := search.New(search.MockSource{})
+	searcher := search.New(search.YTSource{})
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

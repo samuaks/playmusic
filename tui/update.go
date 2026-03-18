@@ -25,7 +25,7 @@ func (m Model) selectedTrack() (library.Track, int, bool) {
 		return library.Track{}, 0, false
 	}
 	for i, t := range m.tracks {
-		if t.Path == item.track.Path {
+		if t.Identifier() == item.track.Identifier() {
 			return t, i, true
 		}
 	}
@@ -73,7 +73,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.elapsed = 0
 				m.paused = false
 				m.current = idx
-				m.list.SetDelegate(newDelegate(m.tracks[m.current].Path, m.searchQuery))
+				m.list.SetDelegate(newDelegate(m.tracks[m.current].Identifier(), m.searchQuery))
 				m.player.Next()
 				return m, m.playCurrent()
 			}
@@ -103,7 +103,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.elapsed = 0
 		m.paused = false
 		m.current = m.findNext()
-		m.list.SetDelegate(newDelegate(m.tracks[m.current].Path, m.searchQuery))
+		m.list.SetDelegate(newDelegate(m.tracks[m.current].Identifier(), m.searchQuery))
 		m.list.Select(m.current)
 		return m, m.playCurrent()
 
@@ -123,7 +123,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.searching = false
 		m.list.SetSize(m.width, m.height-playerBarHeight-searchBarHeight-scanBarHeight)
 		for _, t := range m.tracks {
-			if t.Path == msg.track.Path {
+			if t.Identifier() == msg.track.Identifier() {
 				return m, nil
 			}
 		}

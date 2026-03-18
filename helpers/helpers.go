@@ -3,6 +3,8 @@ package helpers
 import (
 	"fmt"
 	"os"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/dhowden/tag"
@@ -45,4 +47,25 @@ func GetMetadata(path string) (Metadata, error) {
 	}
 
 	return metadata, nil
+}
+
+// duration formatting
+func StringToDuration(duration string) (time.Duration, error) {
+	//duration resp format: 4:16
+	parts := strings.Split(duration, ":")
+
+	if len(parts) < 1 || len(parts) > 2 {
+		return 0, fmt.Errorf("wrong duration format: %s", duration)
+	}
+
+	var seconds int
+	for _, p := range parts {
+		n, err := strconv.Atoi(p)
+		if err != nil {
+			return 0, fmt.Errorf("invalid duration part: %w", err)
+		}
+		seconds = seconds*60 + n
+	}
+
+	return time.Duration(seconds) * time.Second, nil
 }

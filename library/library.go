@@ -12,19 +12,27 @@ import (
 const mediaLibraryDir = "Media"
 
 type Track struct {
-	Trackname string
-	Artist    string
-	Title     string
-	Path      string
-	Filename  string
-	Duration  time.Duration
-	Album     string
-	Year      int
-	Genre     string
+	Trackname  string
+	Artist     string
+	Title      string
+	Path       string
+	Filename   string
+	Duration   time.Duration
+	Album      string
+	Year       int
+	Genre      string
+	YTVideoURl string
 }
 
 func (t Track) FormatDuration() string {
 	return FormattedDuration(t.Duration)
+}
+
+func (t Track) Identifier() string {
+	if t.Path != "" {
+		return t.Path
+	}
+	return t.YTVideoURl
 }
 
 func LoadLibrary(dir string) ([]Track, error) {

@@ -35,7 +35,7 @@ func (d trackDelegate) Render(w io.Writer, m list.Model, index int, item list.It
 
 	//isPlaying := index == d.current && d.current != -1
 
-	isPlaying := t.track.Path == d.currentPath
+	isPlaying := t.track.Identifier() == d.currentPath
 	isSelected := index == m.Index()
 
 	switch {
