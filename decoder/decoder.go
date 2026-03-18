@@ -307,7 +307,7 @@ func closePipeKillProcess(pipe io.ReadCloser, cmd *exec.Cmd) {
 	case <-done: //if done -> going out
 		return
 	case <-time.After(500 * time.Millisecond): //if timeout -> killing the process(500ms is the tick of the UI with less unstable)
-		fmt.Println("Forcing the process to end (Killing)")
+		//fmt.Println("Forcing the process to end (Killing)")
 	}
 
 	err := cmd.Process.Kill()
