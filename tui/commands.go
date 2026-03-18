@@ -9,7 +9,7 @@ import (
 )
 
 func debounceSearch(query string) tea.Cmd {
-	return tea.Tick(500*time.Millisecond, func(t time.Time) tea.Msg {
+	return tea.Tick(1*time.Second, func(t time.Time) tea.Msg {
 		return searchDebounceMsg{query}
 	})
 }
@@ -53,12 +53,19 @@ func tick() tea.Cmd {
 func (m Model) playCurrent() tea.Cmd {
 	track := m.tracks[m.current]
 	player := m.player
+
 	return func() tea.Msg {
-		if err := player.Play(track.Path); err != nil {
+		var err error
+		if track.YTVideoURl != "" {
+			err = player.PlayFromSearch(track.YTVideoURl)
+		} else {
+			err = player.Play(track.Path)
+		}
+		if err != nil {
+			fmt.Println("Error playing track:", err)
 			return trackDoneMsg{}
 		}
-		<-player.Done()
-		return trackDoneMsg{}
+		return nil
 	}
 }
 
