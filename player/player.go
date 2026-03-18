@@ -111,6 +111,10 @@ func (p *Player) Wait() {
 	}
 }
 
+func (p *Player) Done() chan struct{} {
+	return p.done
+}
+
 func (p *Player) Stop() {
 	if p.ctrl != nil {
 		speaker.Clear()
