@@ -1,0 +1,100 @@
+package library
+
+import (
+	"context"
+	"io/fs"
+	"os"
+	"path/filepath"
+	"strings"
+)
+
+var enrichTrack = EnrichTrack
+
+// ScanEvent carries either a discovered/enriched track or a non-fatal scan
+// error. Scan completion is signaled by closing the event channel.
+type ScanEvent struct {
+	Type  ScanEventType
+	Track *Track
+	Err   error
+}
+
+type ScanEventType int
+
+const (
+	ScanEventDiscovered ScanEventType = iota
+	ScanEventEnriched
+)
+
+// ScanForMedia scans the provided directories in the background and emits
+// discovered and enriched tracks one by one into out. Non-fatal walk errors
+// are sent as events with Err set and Track nil. The channel is closed when
+// scanning finishes. Missing directories are skipped.
+func ScanForMedia(ctx context.Context, dirs []string, out chan<- ScanEvent) {
+	defer close(out)
+	state := newScanState(make(map[string]struct{}), make(map[string]struct{}))
+
+	for _, dir := range dirs {
+		if strings.TrimSpace(dir) == "" {
+			continue
+		}
+
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+
+		err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, walkErr error) error {
+			if walkErr != nil {
+				select {
+				case <-ctx.Done():
+					return ctx.Err()
+				case out <- ScanEvent{Err: walkErr}:
+				}
+				return nil
+			}
+
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			default:
+			}
+
+			if !state.shouldInclude(path, d) {
+				return nil
+			}
+
+			discovered := BuildDiscoveredTrack(path)
+
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case out <- ScanEvent{
+				Type:  ScanEventDiscovered,
+				Track: &discovered,
+			}:
+			}
+
+			enriched, enrichErr := enrichTrack(discovered)
+
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case out <- ScanEvent{
+				Type:  ScanEventEnriched,
+				Track: &enriched,
+				Err:   enrichErr,
+			}:
+				return nil
+			}
+		})
+
+		if err != nil && !os.IsNotExist(err) && err != context.Canceled {
+			select {
+			case <-ctx.Done():
+				return
+			case out <- ScanEvent{Err: err}:
+			}
+		}
+	}
+}

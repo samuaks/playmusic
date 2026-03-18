@@ -54,6 +54,24 @@ func (m Model) searchBarView() string {
 	return fmt.Sprintf("%s\n%s\n", title, input)
 }
 
+func (m Model) libraryScanStatusView() string {
+	switch {
+	case m.scanning && m.scanError != nil:
+		return scanWarningStyle.Padding(0, 2).Render(fmt.Sprintf("Library scan warning: %v", m.scanError))
+	case m.scanning:
+		if m.scanAdded > 0 {
+			return scanStatusStyle.Padding(0, 2).Render(fmt.Sprintf("Scanning library... +%d tracks", m.scanAdded))
+		}
+		return scanStatusStyle.Padding(0, 2).Render("Scanning library...")
+	case m.scanDone && m.scanError != nil:
+		return scanWarningStyle.Padding(0, 2).Render(fmt.Sprintf("Library scan complete with warning: %v", m.scanError))
+	case m.scanDone:
+		return scanStatusStyle.Padding(0, 2).Render(fmt.Sprintf("Library scan complete. Added %d tracks.", m.scanAdded))
+	default:
+		return ""
+	}
+}
+
 func (m Model) helpView() string {
 	return dimmedStyle.Render(HELP_TEXT)
 }
