@@ -3,6 +3,7 @@ package player
 import (
 	"fmt"
 	d "playmusic/decoder"
+	"sync/atomic"
 	"time"
 
 	"github.com/gopxl/beep/v2"
@@ -55,6 +56,9 @@ func (p *Player) Play(path string) error {
 // reliant on beep.StreamSeekCloser and something went wrong
 // DecodeStreamUrl returns beep.Streamer, not beep.StreamSeekCloser as Decode()
 func (p *Player) PlayFromSearch(url string) error {
+	var stopped atomic.Bool
+	stopped.Store(false)
+
 	p.Stop()
 
 	streamer, format, closeStream, err := d.DecodeStreamUrl(url)
@@ -64,11 +68,6 @@ func (p *Player) PlayFromSearch(url string) error {
 
 	p.done = make(chan struct{})
 	p.next = make(chan struct{}, 1)
-
-	// don't have .Close() metgod in beep.Streamer
-	// if p.streamer != nil {
-	// 	p.streamer.Close()
-	// }
 
 	if p.sampleRate == 0 {
 		p.sampleRate = format.SampleRate
@@ -82,11 +81,17 @@ func (p *Player) PlayFromSearch(url string) error {
 		finalStreamer = streamer
 	}
 
-	p.ctrl = &beep.Ctrl{Streamer: beep.Seq(finalStreamer, beep.Callback(func() {
+	wrappedStreamer := &stoppableStreamer{
+		inner:   finalStreamer,
+		stopped: &stopped,
+	}
+
+	p.ctrl = &beep.Ctrl{Streamer: beep.Seq(wrappedStreamer, beep.Callback(func() {
 		close(p.done)
 	}))}
 
 	p.closeStreamFn = func() {
+		stopped.Store(true)
 		go closeStream() //different goroutine to end the stream
 	}
 

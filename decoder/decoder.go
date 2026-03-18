@@ -183,8 +183,9 @@ func DecodeStreamUrl(url string) (beep.Streamer, beep.Format, func(), error) {
 	}
 
 	closeFn := func() {
-		closePipeKillProcess(ytdlpOut, ytdlpCmd)
+		//killing downstrean first and then upstream is the right way
 		closePipeKillProcess(ffmpegOut, ffmpeg)
+		closePipeKillProcess(ytdlpOut, ytdlpCmd)
 	}
 
 	if err := ffmpeg.Start(); err != nil {
@@ -290,11 +291,33 @@ func closePipeKillProcess(pipe io.ReadCloser, cmd *exec.Cmd) {
 	}
 
 	// killing process
-	if cmd != nil && cmd.Process != nil {
-		cmd.Process.Kill()
-		err := cmd.Wait()
-		if err != nil {
-			fmt.Println("Error killing the command:", err)
-		}
+	if cmd == nil || cmd.Process == nil {
+		return
+	}
+
+	done := make(chan struct{}) //channel to signal when Wait() is done
+
+	go func() {
+		_ = cmd.Wait() // blocks the thread so performing in separate goroutine
+		close(done)
+	}()
+
+	// waiting for process to exit gracefully
+	select {
+	case <-done: //if done -> going out
+		return
+	case <-time.After(500 * time.Millisecond): //if timeout -> killing the process(500ms is the tick of the UI with less unstable)
+		fmt.Println("Forcing the process to end (Killing)")
+	}
+
+	err := cmd.Process.Kill()
+	if err != nil && !strings.Contains(err.Error(), "Access is denied") {
+		fmt.Println("Error killing the command:", err)
+	}
+
+	select {
+	case <-done:
+	case <-time.After(500 * time.Millisecond):
+		fmt.Println("Wait() timeout, process might be stuck")
 	}
 }
