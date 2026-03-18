@@ -14,6 +14,10 @@ var (
 
 	dimmedStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("240"))
+	scanStatusStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("244"))
+	scanWarningStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("214"))
 	selectedTitleStyle = lipgloss.NewStyle().
 				Foreground(lipgloss.Color("86")).
 				BorderLeft(true).

@@ -4,12 +4,12 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	. "playmusic/decoder"
 	. "playmusic/helpers"
 	"strings"
-	"sync"
 	"time"
 )
+
+const mediaLibraryDir = "Media"
 
 type Track struct {
 	Trackname  string
@@ -36,16 +36,19 @@ func (t Track) Identifier() string {
 }
 
 func LoadLibrary(dir string) ([]Track, error) {
-	return loadFromDir(dir)
+	return loadFromDir(dir, make(map[string]struct{}), make(map[string]struct{}))
 }
 
 func LoadLibraries(dirs ...string) ([]Track, error) {
 	var tracks []Track
+	seenPaths := make(map[string]struct{})
+	seenSignatures := make(map[string]struct{})
+
 	for _, dir := range dirs {
 		if strings.TrimSpace(dir) == "" {
 			continue
 		}
-		scanned, err := loadFromDir(dir)
+		scanned, err := loadFromDir(dir, seenPaths, seenSignatures)
 		if err != nil {
 			if os.IsNotExist(err) {
 				continue
@@ -57,12 +60,12 @@ func LoadLibraries(dirs ...string) ([]Track, error) {
 	if len(tracks) == 0 {
 		return nil, nil
 	}
-	return sortingOfTracks(enrichAndDeduplicate(tracks)), nil
+	return sortingOfTracks(tracks), nil
 }
 
 func DefaultLibraryDirs() []string {
 	dirs := []string{
-		filepath.Clean("Media"),
+		filepath.Clean(mediaLibraryDir),
 	}
 
 	home, err := os.UserHomeDir()
@@ -73,39 +76,50 @@ func DefaultLibraryDirs() []string {
 	return uniqueDirs(dirs)
 }
 
+// BackgroundLibraryDirs returns the directories that should be scanned after
+// the TUI has already started. The local Media directory is excluded so
+// startup stays fast and we do not scan the same source twice.
+func BackgroundLibraryDirs() []string {
+	var dirs []string
+	mediaDir := filepath.Clean(mediaLibraryDir)
+
+	for _, dir := range DefaultLibraryDirs() {
+		if filepath.Clean(dir) == mediaDir {
+			continue
+		}
+		dirs = append(dirs, dir)
+	}
+
+	return dirs
+}
+
 func LoadDefaultLibrary() ([]Track, error) {
 	return LoadLibraries(DefaultLibraryDirs()...)
 }
 
-func loadFromDir(dir string) ([]Track, error) {
+func loadFromDir(dir string, seenPaths, seenSignatures map[string]struct{}) ([]Track, error) {
 	var tracks []Track
+	state := newScanState(seenPaths, seenSignatures)
 
 	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return walkErr
 		}
-		if d.IsDir() || !IsSupported(d.Name()) {
+
+		if !state.shouldInclude(path, d) {
 			return nil
 		}
-		name := d.Name()
 
-		metadata, _ := GetMetadata(path)
-
-		tracks = append(tracks, Track{
-			Trackname: formatTrackName(metadata.Artist, metadata.Title, name),
-			Title:     metadata.Title,
-			Artist:    metadata.Artist,
-			Filename:  name,
-			Path:      path,
-			Year:      metadata.Year,
-			Genre:     metadata.Genre,
-		})
+		discovered := BuildDiscoveredTrack(path)
+		enriched, _ := EnrichTrack(discovered)
+		tracks = append(tracks, enriched)
 		return nil
 	})
 	if err != nil {
 		return nil, err
 	}
-	return enrichAndDeduplicate(tracks), nil
+
+	return tracks, nil
 }
 
 func uniqueDirs(dirs []string) []string {
@@ -120,29 +134,4 @@ func uniqueDirs(dirs []string) []string {
 		uniq = append(uniq, cleaned)
 	}
 	return uniq
-}
-
-func enrichAndDeduplicate(tracks []Track) []Track {
-	var wg sync.WaitGroup
-	hashes := make([]string, len(tracks))
-	for i := range tracks {
-		wg.Add(1)
-		go func(idx int, t *Track) {
-			defer wg.Done()
-			t.Duration, _ = ProbeDuration(t.Path)
-			hashes[idx], _ = hashFile(t.Path)
-		}(i, &tracks[i])
-	}
-	wg.Wait()
-
-	seen := make(map[string]bool)
-	uniqueTracks := tracks[:0]
-	for i, track := range tracks {
-		if hashes[i] == "" || seen[hashes[i]] {
-			continue
-		}
-		seen[hashes[i]] = true
-		uniqueTracks = append(uniqueTracks, track)
-	}
-	return uniqueTracks
 }
