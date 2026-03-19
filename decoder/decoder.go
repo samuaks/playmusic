@@ -3,12 +3,12 @@ package decoder
 import (
 	"bytes"
 	"encoding/binary"
-	"encoding/json"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"playmusic/ffmpeg"
 	"playmusic/yt_dlp"
 	"strconv"
 	"strings"
@@ -99,35 +99,8 @@ func (b bufferedStreamer) Close() error {
 
 func (r readSeekCloser) Close() error { return nil }
 
-func getSourceSampleRate(path string) (int, error) {
-	cmd := exec.Command("ffprobe",
-		"-v", "quiet",
-		"-print_format", "json",
-		"-show_streams",
-		path,
-	)
-	out, err := cmd.Output()
-	if err != nil {
-		return 44100, err
-	}
-
-	var result struct {
-		Streams []struct {
-			SampleRate string `json:"sample_rate"`
-		} `json:"streams"`
-	}
-	if err := json.Unmarshal(out, &result); err != nil || len(result.Streams) == 0 {
-		return 44100, fmt.Errorf("could not parse ffprobe output: %w", err)
-	}
-	sampleRate, err := strconv.Atoi(result.Streams[0].SampleRate)
-	if err != nil {
-		return 44100, fmt.Errorf("invalid sample rate in ffprobe output: %w", err)
-	}
-	return sampleRate, nil
-}
-
 func decodeWithFFmpeg(path string) (beep.StreamSeekCloser, beep.Format, error) {
-	sampleRate, _ := getSourceSampleRate(path)
+	sampleRate, _ := ffmpeg.GetSourceSampleRatePackage(path)
 
 	tmp, err := os.CreateTemp("", "musicplayer-*.wav")
 	if err != nil {
@@ -258,32 +231,7 @@ func ProbeDuration(path string) (time.Duration, error) {
 	if !IsFFmpegAvailable() {
 		return 0, fmt.Errorf("could not determine duration and ffmpeg is not available")
 	}
-	return probeWithFFprobe(path)
-}
-
-type ffprobeOutput struct {
-	Format struct {
-		Duration string `json:"duration"`
-	} `json:"format"`
-}
-
-func probeWithFFprobe(path string) (time.Duration, error) {
-	command := exec.Command("ffprobe", "-v", "quiet", "-print_format", "json", "-show_format", path)
-	output, err := command.Output()
-	if err != nil {
-		return 0, err
-	}
-
-	var result ffprobeOutput
-	if err := json.Unmarshal(output, &result); err != nil {
-		return 0, err
-	}
-	seconds, err := strconv.ParseFloat(result.Format.Duration, 64)
-	if err != nil {
-		return 0, err
-	}
-
-	return time.Duration(seconds * float64(time.Second)), nil
+	return ffmpeg.ProbeDurationWithPackage(path)
 }
 
 func closePipeKillProcess(pipe io.ReadCloser, cmd *exec.Cmd) {
