@@ -8,6 +8,7 @@ A modular command-line media player written in Go. Uses [beep](https://github.co
 - Extended format support (m4a, aac, opus) when FFmpeg is installed
 - Displays track listing with durations on startup
 - Modular architecture split across `library`, `player`, and `colors` packages
+- Search and stream songs from the web
 
 ## Supported Formats
 
@@ -29,13 +30,13 @@ A modular command-line media player written in Go. Uses [beep](https://github.co
 | 1 | Bubble Tea TUI implementation | Feature | Partial |
 | 2 | Pause / Resume / Next track support | Feature | Done |
 | 3 | Volume control | Feature | Not Planned |
-| 4 | Custom media directory / system-wide media scanning | Feature | Planned |
+| 4 | Custom media directory / system-wide media scanning | Feature | Partial |
 | 5 | Headphone wear detection (auto-pause on removal) | Feature | Research |
 | 6 | Sample rate mismatch on some tracks | Bug | Known/Fixed |
 | 7 | CI/CD — GitHub Actions for running tests and building release executables | Feature | Planned |
 | 8 | Album / playlist support | Feature | Planned |
 | 9 | Artist fetching (background job) | Feature | Planned |
-| 10 | Play songs from external sources (yt / spotify) | Feature | Planned |
+| 10 | Play songs from external sources (YouTube) | Feature | Done |
 
 
 
@@ -51,11 +52,13 @@ go build
 ```
 
 Drop your media files into the `Media` directory and they will be played in order.
+Player will also search for the music in common places in your PC and will add them to the playlist.
 
 ## Requirements
 
 - Go 1.21 or later
 - FFmpeg (optional) — install and add to PATH for extended format support. For Windows all can be done by running command: winget install ffmpeg. 
+- yt-dlp will be installed to the temporary directory on your PC and will be used for the search and stream music feature.
 
 ## Attribution
 Music used in demo:

@@ -8,13 +8,19 @@ import (
 	lib "playmusic/library"
 	"playmusic/search"
 	"playmusic/tui"
+	"playmusic/yt_dlp"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/lrstanley/go-ytdlp"
 )
 
 func main() {
-	ytdlp.MustInstall(context.TODO(), nil)
+	resInst, err := ytdlp.Install(context.TODO(), nil)
+	if err != nil {
+		panic(err)
+	}
+	yt_dlp.SetBinaryPath(resInst.Executable)
+
 	const localMediaDir = "Media"
 
 	// Load the local Media directory synchronously so the TUI can start fast

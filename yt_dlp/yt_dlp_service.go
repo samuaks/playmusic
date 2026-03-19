@@ -16,6 +16,12 @@ func init() {
 	jsCheck()
 }
 
+var ytDlpBinaryPath string
+
+func SetBinaryPath(path string) {
+	ytDlpBinaryPath = path
+}
+
 var jsAvalable bool
 
 func jsCheck() {
@@ -54,9 +60,11 @@ func GetStreamURL(ytVideoURL string) (string, error) {
 	return audioURL, nil
 }
 
+// configuration of the pipe with cmd and not package is used as
+// this way connecting "producer" and "receiver" is made easier to config the "receiver"
 func GetAudioStreamPipe(ytVideoURL string) (io.ReadCloser, *exec.Cmd, error) {
 	cmd := exec.Command(
-		"yt-dlp",
+		ytDlpBinaryPath,
 		"-f", "bestaudio",
 		"-o", "-",
 		ytVideoURL,
