@@ -3,6 +3,9 @@ package ffmpeg
 import (
 	"encoding/json"
 	"fmt"
+	"io"
+	"log"
+	"os/exec"
 	"strconv"
 	"time"
 
@@ -21,7 +24,7 @@ type ffprobeSampleRateStruct struct {
 	} `json:"streams"`
 }
 
-func ProbeDurationWithPackage(path string) (time.Duration, error) {
+func ProbeDurationFFmpeg(path string) (time.Duration, error) {
 	output, err := ff.Probe(path)
 	if err != nil {
 		return 0, err
@@ -39,7 +42,7 @@ func ProbeDurationWithPackage(path string) (time.Duration, error) {
 	return time.Duration(seconds * float64(time.Second)), nil
 }
 
-func GetSourceSampleRatePackage(path string) (int, error) {
+func GetSourceSampleRateFFmpeg(path string) (int, error) {
 	out, err := ff.Probe(path)
 	if err != nil {
 		return 44100, err
@@ -54,4 +57,50 @@ func GetSourceSampleRatePackage(path string) (int, error) {
 		return 44100, fmt.Errorf("invalid sample rate in ffprobe output: %w", err)
 	}
 	return sampleRate, nil
+}
+
+func ConvertToWav(inputPath, outputPath string, sampleRate int) error {
+	//turning off logs, as spams in console when converting
+	prev := log.Writer()
+	log.SetOutput(io.Discard)
+	defer log.SetOutput(prev)
+
+	return ff.Input(inputPath).
+		Output(outputPath, ff.KwArgs{
+			"f":  "wav",
+			"ar": strconv.Itoa(sampleRate),
+			"ac": "2",
+		}).
+		OverWriteOutput().
+		Run()
+}
+
+type FFmpegService struct {
+	SampleRate int
+	Channels   int
+}
+
+func StreamFromPipe(input io.Reader) (io.ReadCloser, *exec.Cmd, error) {
+	cmd := exec.Command(
+		"ffmpeg",
+		"-i", "pipe:0",
+		"-f", "s16le",
+		"-ac", "2",
+		"-ar", "44100",
+		"pipe:1",
+	)
+
+	cmd.Stderr = io.Discard
+	cmd.Stdin = input
+
+	out, err := cmd.StdoutPipe()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if err := cmd.Start(); err != nil {
+		return nil, nil, err
+	}
+
+	return out, cmd, nil
 }

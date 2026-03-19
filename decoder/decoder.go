@@ -10,7 +10,6 @@ import (
 	"path/filepath"
 	"playmusic/ffmpeg"
 	"playmusic/yt_dlp"
-	"strconv"
 	"strings"
 	"time"
 
@@ -100,7 +99,7 @@ func (b bufferedStreamer) Close() error {
 func (r readSeekCloser) Close() error { return nil }
 
 func decodeWithFFmpeg(path string) (beep.StreamSeekCloser, beep.Format, error) {
-	sampleRate, _ := ffmpeg.GetSourceSampleRatePackage(path)
+	sampleRate, _ := ffmpeg.GetSourceSampleRateFFmpeg(path)
 
 	tmp, err := os.CreateTemp("", "musicplayer-*.wav")
 	if err != nil {
@@ -109,9 +108,7 @@ func decodeWithFFmpeg(path string) (beep.StreamSeekCloser, beep.Format, error) {
 	tmpPath := tmp.Name()
 	tmp.Close()
 
-	cmd := exec.Command("ffmpeg", "-i", path, "-f", "wav", "-ar", strconv.Itoa(sampleRate), "-ac", "2", "-y", tmpPath)
-	cmd.Stderr = io.Discard
-	if err := cmd.Run(); err != nil {
+	if err := ffmpeg.ConvertToWav(path, tmpPath, sampleRate); err != nil {
 		os.Remove(tmpPath)
 		return nil, beep.Format{}, err
 	}
@@ -144,30 +141,15 @@ func DecodeStreamUrl(url string) (beep.Streamer, beep.Format, func(), error) {
 		return nil, beep.Format{}, nil, err
 	}
 
-	ffmpeg := exec.Command(
-		"ffmpeg",
-		"-i", "pipe:0",
-		"-f", "s16le",
-		"-ac", "2",
-		"-ar", "44100",
-		"pipe:1",
-	)
-	ffmpeg.Stderr = io.Discard
-	ffmpeg.Stdin = ytdlpOut
-
-	ffmpegOut, err := ffmpeg.StdoutPipe()
+	ffmpegOut, ffmpegCmd, err := ffmpeg.StreamFromPipe(ytdlpOut)
 	if err != nil {
 		return nil, beep.Format{}, nil, err
 	}
 
 	closeFn := func() {
 		//killing downstrean first and then upstream is the right way
-		closePipeKillProcess(ffmpegOut, ffmpeg)
+		closePipeKillProcess(ffmpegOut, ffmpegCmd)
 		closePipeKillProcess(ytdlpOut, ytdlpCmd)
-	}
-
-	if err := ffmpeg.Start(); err != nil {
-		return nil, beep.Format{}, closeFn, err
 	}
 
 	// PCM format: 44100 Hz, 2 channels, signed 16-bit
@@ -231,7 +213,7 @@ func ProbeDuration(path string) (time.Duration, error) {
 	if !IsFFmpegAvailable() {
 		return 0, fmt.Errorf("could not determine duration and ffmpeg is not available")
 	}
-	return ffmpeg.ProbeDurationWithPackage(path)
+	return ffmpeg.ProbeDurationFFmpeg(path)
 }
 
 func closePipeKillProcess(pipe io.ReadCloser, cmd *exec.Cmd) {
