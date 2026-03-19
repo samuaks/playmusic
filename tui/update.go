@@ -81,30 +81,30 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if len(m.searchQuery) > 0 {
 				queryRunes := []rune(m.searchQuery)
 
-				if len(queryRunes) > 0{
+				if len(queryRunes) > 0 {
 					queryRunes = queryRunes[:len(queryRunes)-1]
-				}
 
-				m.updateListItems()
-				return m, debounceSearch(m.searchQuery)
-			}
-			return m, nil
-		default:
-			if len(msg.String()) >0 {
-				runes := []rune(msg.String())
-
-			if len(runes) == 1{
-				r := runes[0]
-
-				if unicode.IsGraphic(r) { // isGraphic handles
-					m.searchQuery += msg.String()
-					m.updateListItems()
+					m.searchQuery = string(queryRunes)
 					return m, debounceSearch(m.searchQuery)
 				}
 			}
-		}
-		return m, nil
+			return m, nil
+		default:
+			if len(msg.String()) > 0 {
+				runes := []rune(msg.String())
 
+				if len(runes) == 1 {
+					r := runes[0]
+
+					if unicode.IsGraphic(r) { // isGraphic handles
+						m.searchQuery += msg.String()
+						m.updateListItems()
+						return m, debounceSearch(m.searchQuery)
+					}
+				}
+			}
+			return m, nil
+		}
 	case tickMsg:
 		if !m.paused && m.player.IsPlaying() {
 			m.elapsed += 500 * time.Millisecond
