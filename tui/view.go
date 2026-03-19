@@ -28,6 +28,9 @@ func (m Model) playerBarView() string {
 		if m.paused {
 			status = "⏸"
 		}
+		if m.isRandom {
+			status += " 🔀"
+		}
 
 		nowPlaying = currentStyle.Render(fmt.Sprintf("%s %s", status, track.Trackname))
 		elapsed = dimmedStyle.Render(fmt.Sprintf("%s / %s", FormattedDuration(m.elapsed), track.FormatDuration()))

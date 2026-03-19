@@ -68,6 +68,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.paused = true
 			}
 			return m, nil
+		case "ctrl+r":
+			m.isRandom = !m.isRandom
+			return m, nil
 		case "enter":
 			if _, idx, ok := m.selectedTrack(); ok && idx != m.current {
 				m.elapsed = 0
