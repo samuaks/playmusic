@@ -161,6 +161,11 @@ func decodeWithFFmpeg(path string) (beep.StreamSeekCloser, beep.Format, error) {
 // it is actual streaming: yt-dlp returns stream with bytes and ffmpeg decodes it on the fly,
 // so there is no need to wait until the whole file is downloaded
 func DecodeStreamUrl(url string) (beep.Streamer, beep.Format, func(), error) {
+	if !IsFFmpegAvailable() {
+		err := fmt.Errorf("Can't docode stream without ffmpeg.")
+		return nil, beep.Format{}, nil, err
+	}
+
 	ytdlpOut, ytdlpCmd, err := yt_dlp.GetAudioStreamPipe(url)
 	if err != nil {
 		return nil, beep.Format{}, nil, err
