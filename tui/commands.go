@@ -65,6 +65,9 @@ func (m Model) playCurrent() tea.Cmd {
 			fmt.Println("Error playing track:", err)
 			return trackDoneMsg{}
 		}
+		if player.Wait() {
+			return trackDoneMsg{}
+		}
 		return nil
 	}
 }

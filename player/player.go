@@ -99,15 +99,18 @@ func (p *Player) PlayFromSearch(url string) error {
 	return nil
 }
 
-func (p *Player) Wait() {
+// Wait blocks until the track finishes naturally (returns true) or is interrupted (returns false).
+func (p *Player) Wait() bool {
 	if p.done == nil {
-		return
+		return false
 	}
 
 	select {
 	case <-p.done:
+		return true
 	case <-p.next:
 		p.Stop()
+		return false
 	}
 }
 

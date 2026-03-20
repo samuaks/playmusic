@@ -40,6 +40,7 @@ type Model struct {
 	scanDone    bool
 	scanError   error
 	scanAdded   int
+	isRandom    bool
 }
 
 func NewModel(tracks []library.Track, searcher *search.Searcher, scanCh <-chan library.ScanEvent) Model {
