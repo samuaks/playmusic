@@ -55,10 +55,22 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "ctrl+q", "ctrl+c":
 			m.player.Stop()
 			return m, tea.Quit
+		case "q", "?":
+			if m.focus == focusList {
+				m.focus = focusSearch
+				return m, nil
+			}
 		case "esc":
-			m.searchQuery = ""
+			/*m.searchQuery = ""
 			m.updateListItems()
-			return m, debounceSearch("")
+			return m, debounceSearch("")*/
+			if m.focus == focusSearch {
+				m.focus = focusList
+				m.searchQuery = ""
+				m.updateListItems()
+				return m, nil
+			}
+			return m, nil
 		case " ":
 			if m.paused {
 				m.player.Resume()
