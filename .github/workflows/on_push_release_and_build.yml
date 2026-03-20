@@ -1,0 +1,63 @@
+# This workflow will build a golang project
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-go
+
+name: Release and build
+
+on:
+  push:
+    branches: [ "master" ]
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0   # getting the previous history to make tags and version
+      # extract go version from go.mod?
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.25.5' # setting version of the go
+
+      - name: Extract version from go.mod
+        id: get_version 
+        run: |
+          # Version is set in go.mod: "// version: v1.2.3"
+          VERSION=$(grep "// version:" go.mod | awk '{print $3}')
+          if [ -z "$VERSION" ]; then
+            echo "Version not found in go.mod"
+            exit 1
+          fi
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "Found version: $VERSION"
+
+      - name: Create git tag
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git tag $VERSION
+          git push origin $VERSION
+    
+      - name: Build binary
+       # what "./cmd/playmusic" is for?
+        run: |
+          GOOS=linux GOARCH=amd64 go build playmusic ./cmd/playmusic 
+          
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ env.VERSION }}
+          name: ${{ env.VERSION }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload binary to release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ env.VERSION }}
+          files: playmusic
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
