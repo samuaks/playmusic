@@ -8,6 +8,8 @@ import (
 
 	"playmusic/library"
 	"playmusic/search"
+
+	tea "github.com/charmbracelet/bubbletea"
 )
 
 func TestModelUpdateAddsDiscoveredLibraryTrack(t *testing.T) {
@@ -479,5 +481,47 @@ func TestNewModelStartsInListFocus(t *testing.T) {
 
 	if model.focus != focusList {
 		t.Fatalf("expected default focus to be focusList, got %v", model.focus)
+	}
+}
+
+func TestModelUpdateEntersSearchFocusFromListOnQOrQuestion(t *testing.T) {
+	cases := []string{"q", "?"}
+	for _, key := range cases {
+		t.Run(key, func(t *testing.T) {
+			model := NewModel(nil, search.New(search.MockSource{}), nil)
+			model.focus = focusList
+
+			updatedModel, cmd := model.Update(tea.KeyMsg{
+				Type:  tea.KeyRunes,
+				Runes: []rune(key),
+			})
+			got := updatedModel.(Model)
+
+			if got.focus != focusSearch {
+				t.Fatalf("expected focusSearch after %q, got %v", key, got.focus)
+			}
+			if cmd != nil {
+				t.Fatalf("expected nil cmd on focus switch, got %v", cmd)
+			}
+		})
+	}
+}
+
+func TestModelUpdateLeavesSearchFocusOnEsc(t *testing.T) {
+	model := NewModel(nil, search.New(search.MockSource{}), nil)
+	model.focus = focusSearch
+	model.searchQuery = "abc"
+
+	updatedModel, cmd := model.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	got := updatedModel.(Model)
+
+	if got.focus != focusList {
+		t.Fatalf("expected focusList after esc, got %v", got.focus)
+	}
+	if got.searchQuery != "" {
+		t.Fatalf("expected search query to be cleared on esc, got %q", got.searchQuery)
+	}
+	if cmd != nil {
+		t.Fatalf("expected nil cmd on esc focus switch, got %v", cmd)
 	}
 }
