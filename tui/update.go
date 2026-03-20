@@ -67,6 +67,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.player.Pause()
 				m.paused = true
 			}
+
 			return m, nil
 		case "enter":
 			if _, idx, ok := m.selectedTrack(); ok && idx != m.current {
@@ -103,7 +104,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					}
 				}
 			}
-			return m, nil
+			//	return m, nil
 		}
 	case tickMsg:
 		if !m.paused && m.player.IsPlaying() {
