@@ -11,7 +11,7 @@ import (
 )
 
 func (m Model) Init() tea.Cmd {
-	setTerminalTitle(TITLE + " рџЋ¶")
+	setTerminalTitle(TITLE + "🎶")
 
 	return tea.Batch(
 		tick(),
