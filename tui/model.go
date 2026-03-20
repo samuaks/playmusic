@@ -21,6 +21,13 @@ func (t trackItem) Title() string { return t.track.Trackname } // u can use some
 func (t trackItem) Description() string { return t.track.FormatDuration() }
 func (t trackItem) FilterValue() string { return t.track.Trackname }
 
+type focusMode int
+
+const (
+	focusList focusMode = iota
+	focusSearch
+)
+
 type Model struct {
 	tracks      []library.Track
 	current     int
@@ -31,6 +38,7 @@ type Model struct {
 	progress    progress.Model
 	width       int
 	height      int
+	focus       focusMode
 	searcher    *search.Searcher
 	spinner     spinner.Model
 	searching   bool
@@ -67,6 +75,7 @@ func NewModel(tracks []library.Track, searcher *search.Searcher, scanCh <-chan l
 		player:   &Player{},
 		list:     newList,
 		progress: progress.New(progress.WithDefaultGradient()),
+		focus:    focusList,
 		searcher: searcher,
 		spinner:  s,
 		scanCh:   scanCh,
