@@ -86,6 +86,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					queryRunes = queryRunes[:len(queryRunes)-1]
 
 					m.searchQuery = string(queryRunes)
+					m.updateListItems()
 					return m, debounceSearch(m.searchQuery)
 				}
 			}
