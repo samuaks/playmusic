@@ -473,3 +473,11 @@ func TestNewModelSetsScanningStateFromChannel(t *testing.T) {
 		t.Fatal("expected model to start with scanning disabled when no scan channel is provided")
 	}
 }
+
+func TestNewModelStartsInListFocus(t *testing.T) {
+	model := NewModel(nil, search.New(search.MockSource{}), nil)
+
+	if model.focus != focusList {
+		t.Fatalf("expected default focus to be focusList, got %v", model.focus)
+	}
+}
