@@ -13,6 +13,8 @@ import (
 	"strings"
 	"time"
 
+	ff "github.com/u2takey/ffmpeg-go"
+
 	"github.com/gopxl/beep/v2"
 	"github.com/gopxl/beep/v2/flac"
 	"github.com/gopxl/beep/v2/mp3"
@@ -21,6 +23,12 @@ import (
 )
 
 var ffmpegAvailable bool
+
+type ProdFFmpeg struct{}
+
+func (pr ProdFFmpeg) Probe(path string) (string, error) {
+	return ff.Probe(path)
+}
 
 func init() {
 	_, err := exec.LookPath("ffmpeg")
@@ -80,8 +88,9 @@ func Decode(path string) (beep.StreamSeekCloser, beep.Format, error) {
 	if !IsFFmpegAvailable() {
 		return nil, beep.Format{}, fmt.Errorf("unsupported file format: %s and ffmpeg is not available", ext)
 	}
-	return decodeWithFFmpeg(path)
 
+	prodFF := ProdFFmpeg{}
+	return decodeWithFFmpeg(prodFF, path)
 }
 
 type readSeekCloser struct {
@@ -98,8 +107,8 @@ func (b bufferedStreamer) Close() error {
 
 func (r readSeekCloser) Close() error { return nil }
 
-func decodeWithFFmpeg(path string) (beep.StreamSeekCloser, beep.Format, error) {
-	sampleRate, _ := ffmpeg.GetSourceSampleRateFFmpeg(path)
+func decodeWithFFmpeg(ffInt ffmpeg.FFmpegInterface, path string) (beep.StreamSeekCloser, beep.Format, error) {
+	sampleRate, _ := ffmpeg.GetSourceSampleRateFFmpeg(ffInt, path)
 
 	tmp, err := os.CreateTemp("", "musicplayer-*.wav")
 	if err != nil {
@@ -213,7 +222,9 @@ func ProbeDuration(path string) (time.Duration, error) {
 	if !IsFFmpegAvailable() {
 		return 0, fmt.Errorf("could not determine duration and ffmpeg is not available")
 	}
-	return ffmpeg.ProbeDurationFFmpeg(path)
+
+	prodFF := ProdFFmpeg{}
+	return ffmpeg.ProbeDurationFFmpeg(prodFF, path)
 }
 
 func closePipeKillProcess(pipe io.ReadCloser, cmd *exec.Cmd) {

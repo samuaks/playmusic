@@ -24,8 +24,8 @@ type ffprobeSampleRateStruct struct {
 	} `json:"streams"`
 }
 
-func ProbeDurationFFmpeg(path string) (time.Duration, error) {
-	output, err := ff.Probe(path)
+func ProbeDurationFFmpeg(ffInt FFmpegInterface, path string) (time.Duration, error) {
+	output, err := ffInt.Probe(path)
 	if err != nil {
 		return 0, err
 	}
@@ -42,8 +42,8 @@ func ProbeDurationFFmpeg(path string) (time.Duration, error) {
 	return time.Duration(seconds * float64(time.Second)), nil
 }
 
-func GetSourceSampleRateFFmpeg(path string) (int, error) {
-	out, err := ff.Probe(path)
+func GetSourceSampleRateFFmpeg(ffInt FFmpegInterface, path string) (int, error) {
+	out, err := ffInt.Probe(path)
 	if err != nil {
 		return 44100, err
 	}
@@ -73,11 +73,6 @@ func ConvertToWav(inputPath, outputPath string, sampleRate int) error {
 		}).
 		OverWriteOutput().
 		Run()
-}
-
-type FFmpegService struct {
-	SampleRate int
-	Channels   int
 }
 
 func StreamFromPipe(input io.Reader) (io.ReadCloser, *exec.Cmd, error) {
