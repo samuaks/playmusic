@@ -2,6 +2,8 @@ module playmusic
 
 go 1.25.5
 
+// version v.1.0.0
+
 require (
 	github.com/charmbracelet/bubbles v1.0.0
 	github.com/charmbracelet/bubbletea v1.3.10
