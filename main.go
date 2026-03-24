@@ -6,7 +6,6 @@ import (
 
 	"os"
 	lib "playmusic/library"
-	"playmusic/search"
 	"playmusic/tui"
 	"playmusic/yt_dlp"
 
@@ -33,7 +32,7 @@ func main() {
 		tracks = nil
 	}
 
-	searcher := search.New(search.YTSource{})
+	/* 	searcher := search.New(search.YTSource{}) */
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -43,7 +42,7 @@ func main() {
 	go lib.ScanForMedia(ctx, lib.BackgroundLibraryDirs(), scanCh)
 
 	ui := tea.NewProgram(
-		tui.NewModel(tracks, searcher, scanCh),
+		tui.NewModel(tracks, scanCh),
 		tea.WithAltScreen(),
 	)
 
