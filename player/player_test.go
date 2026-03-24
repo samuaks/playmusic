@@ -87,7 +87,7 @@ func TestPlayM4AWithFFmpeg(t *testing.T) {
 	}
 
 	p := &Player{}
-	err := p.Play(testFile("porcelain.m4a"))
+	err := p.Play(testFile("sample3.m4a"))
 	if err != nil {
 		t.Errorf("expected no error playing m4a, got: %v", err)
 	}
