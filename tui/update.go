@@ -67,6 +67,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.player.Pause()
 				m.paused = true
 			}
+
 			return m, nil
 		case "ctrl+r":
 			m.isRandom = !m.isRandom
@@ -82,20 +83,32 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		case "backspace":
 			if len(m.searchQuery) > 0 {
-				m.searchQuery = m.searchQuery[:len(m.searchQuery)-1]
-				m.updateListItems()
-				return m, debounceSearch(m.searchQuery)
-			}
-			return m, nil
-		default:
-			if len(msg.String()) == 1 && msg.String() != " " {
-				r := rune(msg.String()[0])
-				if unicode.IsLetter(r) || unicode.IsNumber(r) || unicode.IsPunct(r) {
-					m.searchQuery += msg.String()
+				queryRunes := []rune(m.searchQuery)
+
+				if len(queryRunes) > 0 {
+					queryRunes = queryRunes[:len(queryRunes)-1]
+
+					m.searchQuery = string(queryRunes)
 					m.updateListItems()
 					return m, debounceSearch(m.searchQuery)
 				}
 			}
+			return m, nil
+		default:
+			if len(msg.String()) > 0 {
+				runes := []rune(msg.String())
+
+				if len(runes) == 1 {
+					r := runes[0]
+
+					if unicode.IsGraphic(r) { // isGraphic handles
+						m.searchQuery += msg.String()
+						m.updateListItems()
+						return m, debounceSearch(m.searchQuery)
+					}
+				}
+			}
+			//	return m, nil
 		}
 	case tickMsg:
 		if !m.paused && m.player.IsPlaying() {
