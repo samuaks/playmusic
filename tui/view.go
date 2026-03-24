@@ -45,9 +45,6 @@ func (m Model) searchBarView() string {
 	var query string
 
 	switch {
-	case m.searching:
-		query = m.spinner.View() + " " + dimmedStyle.Render(m.searchQuery)
-
 	case m.searchQuery == "":
 		query = dimmedStyle.Render("> " + SEARCHBAR_TEXT)
 	default:

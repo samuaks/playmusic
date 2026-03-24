@@ -72,7 +72,7 @@ func (m Model) playCurrent() tea.Cmd {
 	}
 }
 
-func (m Model) runSearch(query string) tea.Cmd {
+/* func (m Model) runSearch(query string) tea.Cmd {
 	return func() tea.Msg {
 		tracks, err := m.searcher.Search(query)
 		if err != nil || len(tracks) == 0 {
@@ -84,3 +84,4 @@ func (m Model) runSearch(query string) tea.Cmd {
 		return searchDoneMsg{}
 	}
 }
+*/
