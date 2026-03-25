@@ -18,4 +18,4 @@ jobs:
           go-version: 1.25.5
           
       - name: Run tests
-        run: run: go test $(go list ./... | grep -v '/yt_dlp') # recursively in all directories except yt_dlp folder
+        run: go test $(go list ./... | grep -v '/yt_dlp') # recursively in all directories except yt_dlp folder
