@@ -6,6 +6,7 @@ import (
 
 	"os"
 	lib "playmusic/library"
+	"playmusic/search"
 	"playmusic/tui"
 	"playmusic/yt_dlp"
 
@@ -14,16 +15,8 @@ import (
 )
 
 func main() {
-	resInst, err := ytdlp.Install(context.TODO(), nil)
-	if err != nil {
-		panic(err)
-	}
-	yt_dlp.SetBinaryPath(resInst.Executable)
-
 	const localMediaDir = "Media"
 
-	// Load the local Media directory synchronously so the TUI can start fast
-	// with an immediate playlist even on cold startup.
 	tracks, err := lib.LoadLibrary(localMediaDir)
 	if err != nil {
 		if !os.IsNotExist(err) {
@@ -32,19 +25,31 @@ func main() {
 		tracks = nil
 	}
 
-	/* 	searcher := search.New(search.YTSource{}) */
-
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// Scan the rest of the library in the background and stream tracks into the TUI.
-	scanCh := make(chan lib.ScanEvent)
-	go lib.ScanForMedia(ctx, lib.BackgroundLibraryDirs(), scanCh)
+	var ui *tea.Program
 
-	ui := tea.NewProgram(
-		tui.NewModel(tracks, scanCh),
-		tea.WithAltScreen(),
-	)
+	if len(os.Args) > 1 && os.Args[1] == "--radio" {
+		resInst, err := ytdlp.Install(context.TODO(), nil)
+		if err != nil {
+			fmt.Printf("Warning: failed to install yt-dlp: %v\n", err)
+		} else {
+			yt_dlp.SetBinaryPath(resInst.Executable)
+		}
+		searcher := search.New(search.YTSource{})
+		ui = tea.NewProgram(
+			tui.NewOnlineModel(tracks, searcher),
+			tea.WithAltScreen(),
+		)
+	} else {
+		scanCh := make(chan lib.ScanEvent)
+		go lib.ScanForMedia(ctx, lib.BackgroundLibraryDirs(), scanCh)
+		ui = tea.NewProgram(
+			tui.NewModel(tracks, scanCh),
+			tea.WithAltScreen(),
+		)
+	}
 
 	if _, err := ui.Run(); err != nil {
 		fmt.Printf("Error: %v\n", err)
