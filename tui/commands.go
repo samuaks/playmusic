@@ -56,8 +56,8 @@ func (m Model) playCurrent() tea.Cmd {
 
 	return func() tea.Msg {
 		var err error
-		if track.YTVideoURl != "" {
-			err = player.PlayFromSearch(track.YTVideoURl)
+		if track.YTVideoURL != "" {
+			err = player.PlayFromSearch(track.YTVideoURL)
 		} else {
 			err = player.Play(track.Path)
 		}

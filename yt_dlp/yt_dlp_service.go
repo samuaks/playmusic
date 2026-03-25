@@ -22,33 +22,38 @@ func SetBinaryPath(path string) {
 	ytDlpBinaryPath = path
 }
 
-var jsAvalable bool
+var jsAvailable bool
 
 func jsCheck() {
 	_, err := exec.LookPath("node")
-	jsAvalable = err == nil
+	jsAvailable = err == nil
 }
 
 // yt-dlp wants a JavaScrypt runtime to execute some of its features.
 // If Node.js is in the PATH, we can use it as the runtime for yt-dlp.
 func IsJSAvailable() bool {
-	return jsAvalable
+	return jsAvailable
+}
+
+type TrackInfo struct {
+	Trackname  string
+	YTVideoURL string
+	Duration   time.Duration
 }
 
 // not used in the current impl
 func GetStreamURL(ytVideoURL string) (string, error) {
 	var ytdlpCommand *ytdlp.Command
 
-	if !jsAvalable {
-		ytdlpCommand = ytdlp.New().
-			Format("bestaudio").
-			Print("urls")
-	} else {
-		ytdlpCommand = ytdlp.New().
-			JsRuntimes("node").
-			Format("bestaudio").
-			Print("urls")
+	ytdlpCommand = ytdlp.New()
+
+	if jsAvailable {
+		ytdlpCommand = ytdlpCommand.JsRuntimes("node")
 	}
+
+	ytdlpCommand = ytdlpCommand.
+		Format("bestaudio").
+		Print("urls")
 
 	output, err := ytdlpCommand.Run(context.TODO(), ytVideoURL)
 	if err != nil {
@@ -87,21 +92,55 @@ func GetAudioStreamPipe(ytVideoURL string) (io.ReadCloser, *exec.Cmd, error) {
 func GetYTVideoInfo(query string) (string, string, time.Duration, error) {
 	var ytdlpCommand *ytdlp.Command
 
-	if !jsAvalable {
-		ytdlpCommand = ytdlp.New().
-			Print("%(webpage_url)s|%(title)s|%(duration)s")
-	} else {
-		ytdlpCommand = ytdlp.New().
-			JsRuntimes("node").
-			Print("%(webpage_url)s|%(title)s|%(duration)s")
+	ytdlpCommand = ytdlp.New()
+
+	if jsAvailable {
+		ytdlpCommand = ytdlpCommand.JsRuntimes("node")
 	}
+
+	ytdlpCommand = ytdlpCommand.Print("%(webpage_url)s<<>>%(title)s<<>>%(duration)s")
 
 	out, err := ytdlpCommand.Run(context.TODO(), "ytsearch1:"+query)
 	if err != nil {
 		return "", "", 0, err
 	}
 
-	parts := strings.SplitN(strings.TrimSpace(out.Stdout), "|", 3)
+	return extractInfoFromResult(*out)
+}
+
+func GetMusicJamPlaylistWithQuery(query string) ([]TrackInfo, error) {
+	var ytdlpCommand *ytdlp.Command
+	var playlist []TrackInfo
+
+	if jsAvailable {
+		ytdlpCommand = ytdlpCommand.JsRuntimes("node")
+	}
+
+	ytdlpCommand = ytdlpCommand.Print("%(webpage_url)s<<>>%(title)s<<>>%(duration)s")
+
+	out, err := ytdlpCommand.Run(context.TODO(), "jtsearch20:"+query+" topic") //20 results
+	if err != nil {
+		return nil, err
+	}
+
+	for line := range strings.SplitSeq(strings.TrimSpace(out.Stdout), "\n") {
+		urls, title, duration, err := extractInfoFromResult(ytdlp.Result{Stdout: line})
+		if err != nil {
+			continue
+		}
+
+		playlist = append(playlist, TrackInfo{
+			Trackname:  title,
+			YTVideoURL: urls,
+			Duration:   duration,
+		})
+	}
+
+	return playlist, nil
+}
+
+func extractInfoFromResult(queryRes ytdlp.Result) (string, string, time.Duration, error) {
+	parts := strings.SplitN(strings.TrimSpace(queryRes.Stdout), "<<>>", 3)
 	if len(parts) < 3 {
 		return "", "", 0, fmt.Errorf("invalid output")
 	}
@@ -110,6 +149,9 @@ func GetYTVideoInfo(query string) (string, string, time.Duration, error) {
 	title := parts[1]
 	duration := strings.TrimSpace(parts[2])
 	formatted, err := helpers.StringToDuration(duration)
+	if err != nil {
+		return "", "", 0, err
+	}
 
 	return url, title, formatted, nil
 }

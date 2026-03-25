@@ -126,7 +126,7 @@ func (m OnlineModel) View() string {
 	if m.result != nil {
 		sb.WriteString(lipgloss.NewStyle().Padding(0, 2).Render(
 			currentStyle.Render("▶ "+m.result.Trackname) + "\n" +
-				dimmedStyle.Render(m.result.YTVideoURl),
+				dimmedStyle.Render(m.result.YTVideoURL),
 		))
 	}
 

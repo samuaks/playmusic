@@ -21,7 +21,7 @@ type Track struct {
 	Album      string
 	Year       int
 	Genre      string
-	YTVideoURl string
+	YTVideoURL string
 }
 
 func (t Track) FormatDuration() string {
@@ -32,7 +32,7 @@ func (t Track) Identifier() string {
 	if t.Path != "" {
 		return t.Path
 	}
-	return t.YTVideoURl
+	return t.YTVideoURL
 }
 
 func LoadLibrary(dir string) ([]Track, error) {
