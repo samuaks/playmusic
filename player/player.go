@@ -16,9 +16,18 @@ type Player struct {
 	paused        bool
 	done          chan struct{}
 	next          chan struct{}
+	prev          chan struct{}
 	sampleRate    beep.SampleRate
 	closeStreamFn func()
 }
+
+type PlayResult int
+
+const (
+	TrackFinished PlayResult = iota
+	TrackNext
+	TrackPrev
+)
 
 func (p *Player) Play(path string) error {
 	p.Stop()
@@ -69,6 +78,7 @@ func (p *Player) PlayFromSearch(url string) error {
 
 	p.done = make(chan struct{})
 	p.next = make(chan struct{}, 1)
+	p.prev = make(chan struct{}, 1)
 
 	if p.sampleRate == 0 {
 		p.sampleRate = format.SampleRate
@@ -101,7 +111,25 @@ func (p *Player) PlayFromSearch(url string) error {
 }
 
 // Wait blocks until the track finishes naturally (returns true) or is interrupted (returns false).
-func (p *Player) Wait() bool {
+func (p *Player) Wait() PlayResult {
+	if p.done == nil {
+		return TrackFinished
+	}
+
+	select {
+	case <-p.done:
+		return TrackFinished
+	case <-p.next:
+		p.Stop()
+		return TrackNext
+	case <-p.prev:
+		p.Stop()
+		return TrackPrev
+	}
+
+}
+
+func (p *Player) SimpleWait() bool {
 	if p.done == nil {
 		return false
 	}
@@ -160,6 +188,17 @@ func (p *Player) Next() {
 
 	select {
 	case p.next <- struct{}{}:
+	default:
+	}
+}
+
+func (p *Player) Prev() {
+	if p.prev == nil {
+		return
+	}
+
+	select {
+	case p.prev <- struct{}{}:
 	default:
 	}
 }

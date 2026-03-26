@@ -81,6 +81,9 @@ func (m OnlineModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "ctrl+n":
 			m.player.Next()
 			return m, nil
+		case "ctrl+b":
+			m.player.Prev()
+			return m, nil
 		default:
 			if len(msg.String()) == 1 {
 				r := rune(msg.String()[0])
@@ -133,6 +136,26 @@ func (m OnlineModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, m.playCurrent()
 		}
 		return m, nil
+
+	case trackNextMsg:
+		m.current++
+		if m.current > len(m.tracks) {
+			m.current = len(m.tracks) - 1
+		}
+		m.result = &m.tracks[m.current]
+		return m, m.playCurrent()
+
+	case trackPrevMsg:
+		if m.elapsed > 3*time.Second {
+			return m, m.playCurrent()
+		}
+
+		m.current--
+		if m.current < 0 {
+			m.current = 0
+		}
+		m.result = &m.tracks[m.current]
+		return m, m.playCurrent()
 
 	}
 
@@ -190,16 +213,24 @@ func (m OnlineModel) playCurrent() tea.Cmd {
 	}
 
 	track := m.tracks[m.current]
-	player := m.player
+	pl := m.player
 
 	return func() tea.Msg {
-		err := player.PlayFromSearch(track.YTVideoURL)
+		err := pl.PlayFromSearch(track.YTVideoURL)
 		if err != nil {
 			return searchDoneMsg{}
 		}
 
-		player.Wait()
-		return trackDoneMsg{}
+		switch pl.Wait() {
+		case player.TrackFinished:
+			return trackDoneMsg{}
+		case player.TrackNext:
+			return trackNextMsg{}
+		case player.TrackPrev:
+			return trackPrevMsg{}
+		}
+
+		return nil
 	}
 }
 

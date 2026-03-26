@@ -7,6 +7,8 @@ import (
 
 type tickMsg time.Time
 type trackDoneMsg struct{}
+type trackNextMsg struct{}
+type trackPrevMsg struct{}
 
 type searchDebounceMsg struct {
 	query string

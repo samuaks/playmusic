@@ -55,17 +55,13 @@ func (m Model) playCurrent() tea.Cmd {
 	player := m.player
 
 	return func() tea.Msg {
-		var err error
-		if track.YTVideoURL != "" {
-			err = player.PlayFromSearch(track.YTVideoURL)
-		} else {
-			err = player.Play(track.Path)
-		}
+		err := player.Play(track.Path)
+
 		if err != nil {
 			fmt.Println("Error playing track:", err)
 			return trackDoneMsg{}
 		}
-		if player.Wait() {
+		if player.SimpleWait() {
 			return trackDoneMsg{}
 		}
 		return nil
