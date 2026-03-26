@@ -69,8 +69,18 @@ func (m OnlineModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				// playback handled separately
 			}
 			return m, debounceSearch(m.searchQuery)
-		case "ctrl+p": //play
-		case "ctrl+n": //next
+		case "ctrl+p":
+			if m.paused {
+				m.player.Resume()
+				m.paused = false
+			} else {
+				m.player.Pause()
+				m.paused = true
+			}
+			return m, nil
+		case "ctrl+n":
+			m.player.Next()
+			return m, nil
 		default:
 			if len(msg.String()) == 1 {
 				r := rune(msg.String()[0])
@@ -102,6 +112,28 @@ func (m OnlineModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.spinner, cmd = m.spinner.Update(msg)
 			return m, cmd
 		}
+
+	case searchResultsMsg:
+		m.searching = false
+		m.tracks = msg.tracks
+		m.current = 0
+
+		if len(m.tracks) > 0 {
+			m.result = &m.tracks[0]
+			return m, m.playCurrent()
+		}
+
+		return m, nil
+
+	case trackDoneMsg:
+		m.current++
+
+		if m.current < len(m.tracks) {
+			m.result = &m.tracks[m.current]
+			return m, m.playCurrent()
+		}
+		return m, nil
+
 	}
 
 	return m, nil
@@ -113,9 +145,10 @@ func (m OnlineModel) runOnlineSearch(query string) tea.Cmd {
 		if err != nil || len(tracks) == 0 {
 			return searchDoneMsg{}
 		}
-		return searchTrackFoundMsg{tracks[0]}
+		return searchResultsMsg{tracks: tracks}
 	}
 }
+
 func (m OnlineModel) View() string {
 	var sb strings.Builder
 
@@ -123,7 +156,7 @@ func (m OnlineModel) View() string {
 
 	query := "> " + m.searchQuery
 	if m.searchQuery == "" {
-		query = dimmedStyle.Render("> type to search youtube...")
+		query = dimmedStyle.Render("> type query to play music by artist or genre...")
 	}
 	if m.searching {
 		query = m.spinner.View() + " " + dimmedStyle.Render(m.searchQuery)
@@ -131,16 +164,51 @@ func (m OnlineModel) View() string {
 	sb.WriteString(lipgloss.NewStyle().Padding(0, 2).Render(query) + "\n\n")
 
 	if m.result != nil {
+		symb := "▶ "
+
+		if m.paused {
+			symb = "▮▮ "
+		}
 		sb.WriteString(lipgloss.NewStyle().Padding(0, 2).Render(
-			currentStyle.Render("▶ "+m.result.Trackname) + "\n" +
+			currentStyle.Render(symb+m.result.Trackname) + "\n" +
 				dimmedStyle.Render(m.result.YTVideoURL),
 		))
 	}
 
 	sb.WriteString("\n\n")
 	sb.WriteString(lipgloss.NewStyle().Padding(0, 2).Render(
-		dimmedStyle.Render("enter search • esc clear • ctrl+q quit"),
+		dimmedStyle.Render("• enter: search • esc: clear query \n" +
+			"• ctrl+p: pause/play • ctrl+n: next track • ctrl+b: previous track • ctrl+d: download the track • ctrl+q: quit"),
 	))
 
 	return sb.String()
+}
+
+func (m OnlineModel) playCurrent() tea.Cmd {
+	if len(m.tracks) == 0 || m.current >= len(m.tracks) {
+		return nil
+	}
+
+	track := m.tracks[m.current]
+	player := m.player
+
+	return func() tea.Msg {
+		err := player.PlayFromSearch(track.YTVideoURL)
+		if err != nil {
+			return searchDoneMsg{}
+		}
+
+		player.Wait()
+		return trackDoneMsg{}
+	}
+}
+
+func waitTrackDone(p *player.Player) tea.Cmd {
+	return func() tea.Msg {
+		if p.Done() == nil {
+			return nil
+		}
+		<-p.Done()
+		return trackDoneMsg{}
+	}
 }

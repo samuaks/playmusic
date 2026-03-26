@@ -94,7 +94,7 @@ func GetYTVideoInfo(query string) (string, string, time.Duration, error) {
 		ytdlpCommand = ytdlpCommand.JsRuntimes("node")
 	}
 
-	ytdlpCommand = ytdlpCommand.Print("%(webpage_url)s<<>>%(title)s<<>>%(duration)s")
+	ytdlpCommand = ytdlpCommand.Print("%(webpage_url)s<<>>%(uploader)s<<>>%(title)s<<>>%(duration)s")
 
 	out, err := ytdlpCommand.Run(context.TODO(), "ytsearch1:"+query)
 	if err != nil {
@@ -112,7 +112,10 @@ func GetMusicJamPlaylistWithQuery(query string) ([]TrackInfo, error) {
 		ytdlpCommand = ytdlpCommand.JsRuntimes("node")
 	}
 
-	ytdlpCommand = ytdlpCommand.Print("%(webpage_url)s<<>>%(title)s<<>>%(duration)s")
+	ytdlpCommand = ytdlpCommand.
+		NoWarnings().
+		Quiet().
+		Print("%(webpage_url)s<<>>%(uploader)s<<>>%(title)s<<>>%(duration)s")
 
 	out, err := ytdlpCommand.Run(context.TODO(), "ytsearch20:"+query+" topic") //20 results
 	if err != nil {
@@ -136,18 +139,19 @@ func GetMusicJamPlaylistWithQuery(query string) ([]TrackInfo, error) {
 }
 
 func extractInfoFromResult(queryRes ytdlp.Result) (string, string, time.Duration, error) {
-	parts := strings.SplitN(strings.TrimSpace(queryRes.Stdout), "<<>>", 3)
-	if len(parts) < 3 {
+	parts := strings.SplitN(strings.TrimSpace(queryRes.Stdout), "<<>>", 4)
+	if len(parts) < 4 {
 		return "", "", 0, fmt.Errorf("invalid output")
 	}
 
 	url := parts[0]
-	title := parts[1]
-	duration := strings.TrimSpace(parts[2])
+	author := parts[1]
+	name := parts[2]
+	duration := strings.TrimSpace(parts[3])
 	formatted, err := helpers.StringToDuration(duration)
 	if err != nil {
 		return "", "", 0, err
 	}
 
-	return url, title, formatted, nil
+	return url, author + " - " + name, formatted, nil
 }

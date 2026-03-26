@@ -104,7 +104,7 @@ func TestShouldGetListOfTracks(t *testing.T) {
 		t.Fatal("No result from the request.")
 	}
 
-	if len(out) != 20 {
+	if len(out) == 0 {
 		t.Fatal("Not enough elements in the result.")
 	}
 

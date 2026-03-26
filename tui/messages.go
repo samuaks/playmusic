@@ -38,3 +38,7 @@ type libraryScanErrorMsg struct {
 type libraryScanDoneMsg struct{}
 
 type searchDoneMsg struct{}
+
+type searchResultsMsg struct {
+	tracks []library.Track
+}

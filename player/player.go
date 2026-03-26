@@ -13,6 +13,7 @@ import (
 type Player struct {
 	ctrl          *beep.Ctrl
 	streamer      beep.StreamSeekCloser
+	paused        bool
 	done          chan struct{}
 	next          chan struct{}
 	sampleRate    beep.SampleRate
@@ -153,8 +154,13 @@ func (p *Player) Resume() {
 }
 
 func (p *Player) Next() {
-	if p.done != nil {
-		p.next <- struct{}{}
+	if p.next == nil {
+		return
+	}
+
+	select {
+	case p.next <- struct{}{}:
+	default:
 	}
 }
 
