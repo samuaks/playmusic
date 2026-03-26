@@ -9,12 +9,11 @@ import (
 
 func (m Model) playerBarView() string {
 	nowPlaying := ""
-	elapsed := ""
-	var percent float64
+	percent, elapsedStr := m.trackProgress()
+	elapsed := dimmedStyle.Render(elapsedStr)
 
 	if m.current == -1 {
 		nowPlaying = dimmedStyle.Render("No track selected")
-		elapsed = dimmedStyle.Render("0:00 / 0:00")
 	} else {
 		track := m.tracks[m.current]
 		if track.Duration > 0 {
@@ -33,11 +32,27 @@ func (m Model) playerBarView() string {
 		}
 
 		nowPlaying = currentStyle.Render(fmt.Sprintf("%s %s", status, track.Trackname))
-		elapsed = dimmedStyle.Render(fmt.Sprintf("%s / %s", FormattedDuration(m.elapsed), track.FormatDuration()))
 	}
 
 	return barStyle.Width(m.width - 2).Render(
 		fmt.Sprintf("%s\n%s\n%s\n%s", nowPlaying, elapsed, m.progress.ViewAs(percent), m.helpView()))
+}
+
+func (m Model) trackProgress() (percent float64, elapsed string) {
+	if m.current == -1 || len(m.tracks) == 0 {
+		return 0, "0:00 / 0:00"
+	}
+
+	track := m.tracks[m.current]
+	if track.Duration > 0 {
+		percent = float64(m.elapsed) / float64(track.Duration)
+		if percent > 1 {
+			percent = 1
+		}
+	}
+
+	elapsed = fmt.Sprintf("%s / %s", FormattedDuration(m.elapsed), track.FormatDuration())
+	return
 }
 
 func (m Model) searchBarView() string {
