@@ -43,9 +43,7 @@ type TrackInfo struct {
 
 // not used in the current impl
 func GetStreamURL(ytVideoURL string) (string, error) {
-	var ytdlpCommand *ytdlp.Command
-
-	ytdlpCommand = ytdlp.New()
+	ytdlpCommand := ytdlp.New()
 
 	if jsAvailable {
 		ytdlpCommand = ytdlpCommand.JsRuntimes("node")
@@ -90,9 +88,7 @@ func GetAudioStreamPipe(ytVideoURL string) (io.ReadCloser, *exec.Cmd, error) {
 }
 
 func GetYTVideoInfo(query string) (string, string, time.Duration, error) {
-	var ytdlpCommand *ytdlp.Command
-
-	ytdlpCommand = ytdlp.New()
+	ytdlpCommand := ytdlp.New()
 
 	if jsAvailable {
 		ytdlpCommand = ytdlpCommand.JsRuntimes("node")
@@ -109,8 +105,8 @@ func GetYTVideoInfo(query string) (string, string, time.Duration, error) {
 }
 
 func GetMusicJamPlaylistWithQuery(query string) ([]TrackInfo, error) {
-	var ytdlpCommand *ytdlp.Command
 	var playlist []TrackInfo
+	ytdlpCommand := ytdlp.New()
 
 	if jsAvailable {
 		ytdlpCommand = ytdlpCommand.JsRuntimes("node")
@@ -118,7 +114,7 @@ func GetMusicJamPlaylistWithQuery(query string) ([]TrackInfo, error) {
 
 	ytdlpCommand = ytdlpCommand.Print("%(webpage_url)s<<>>%(title)s<<>>%(duration)s")
 
-	out, err := ytdlpCommand.Run(context.TODO(), "jtsearch20:"+query+" topic") //20 results
+	out, err := ytdlpCommand.Run(context.TODO(), "ytsearch20:"+query+" topic") //20 results
 	if err != nil {
 		return nil, err
 	}

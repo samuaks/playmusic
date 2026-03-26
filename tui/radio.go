@@ -5,6 +5,7 @@ import (
 	"playmusic/player"
 	"playmusic/search"
 	"strings"
+	"time"
 	"unicode"
 
 	"github.com/charmbracelet/bubbles/spinner"
@@ -13,6 +14,10 @@ import (
 )
 
 type OnlineModel struct {
+	tracks      []library.Track
+	current     int
+	elapsed     time.Duration
+	paused      bool
 	searcher    *search.Searcher
 	player      *player.Player
 	searchQuery string
@@ -64,6 +69,8 @@ func (m OnlineModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				// playback handled separately
 			}
 			return m, debounceSearch(m.searchQuery)
+		case "ctrl+p": //play
+		case "ctrl+n": //next
 		default:
 			if len(msg.String()) == 1 {
 				r := rune(msg.String()[0])

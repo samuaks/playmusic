@@ -86,3 +86,27 @@ func TestShouldGetThePipe(t *testing.T) {
 		t.Fatal("Timeout: stream is stuck")
 	}
 }
+
+func TestShouldGetListOfTracks(t *testing.T) {
+	resInst, err := ytdlp.Install(context.TODO(), nil)
+	if err != nil {
+		t.Fatal("Can't install and use yt-dlp.")
+	}
+
+	SetBinaryPath(resInst.Executable)
+
+	out, err := GetMusicJamPlaylistWithQuery("the weeknd")
+	if err != nil {
+		t.Fatalf("Failed to receive list of tracks: %v", err)
+	}
+
+	if out == nil {
+		t.Fatal("No result from the request.")
+	}
+
+	if len(out) != 20 {
+		t.Fatal("Not enough elements in the result.")
+	}
+
+	t.Logf("%s", out)
+}
