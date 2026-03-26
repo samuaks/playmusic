@@ -1,12 +1,15 @@
 package tui
 
 import (
+	"fmt"
 	"playmusic/library"
 	"playmusic/player"
 	"playmusic/search"
 	"strings"
 	"time"
 	"unicode"
+
+	. "playmusic/helpers"
 
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
@@ -41,7 +44,7 @@ func NewOnlineModel(tracks []library.Track, searcher *search.Searcher) OnlineMod
 }
 
 func (m OnlineModel) Init() tea.Cmd {
-	return nil
+	return tick()
 }
 
 func (m OnlineModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -130,6 +133,7 @@ func (m OnlineModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case trackDoneMsg:
 		m.current++
+		m.elapsed = 0
 
 		if m.current < len(m.tracks) {
 			m.result = &m.tracks[m.current]
@@ -139,6 +143,8 @@ func (m OnlineModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case trackNextMsg:
 		m.current++
+		m.elapsed = 0
+
 		if m.current > len(m.tracks) {
 			m.current = len(m.tracks) - 1
 		}
@@ -146,6 +152,8 @@ func (m OnlineModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.playCurrent()
 
 	case trackPrevMsg:
+		m.elapsed = 0
+
 		if m.elapsed > 3*time.Second {
 			return m, m.playCurrent()
 		}
@@ -156,6 +164,12 @@ func (m OnlineModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.result = &m.tracks[m.current]
 		return m, m.playCurrent()
+
+	case tickMsg:
+		if !m.paused && m.player.IsPlaying() {
+			m.elapsed += 500 * time.Millisecond
+		}
+		return m, tick()
 
 	}
 
@@ -179,12 +193,14 @@ func (m OnlineModel) View() string {
 
 	query := "> " + m.searchQuery
 	if m.searchQuery == "" {
-		query = dimmedStyle.Render("> type query to play music by artist or genre...")
+		query = dimmedStyle.Render("> type artist or genre query to play music...")
 	}
 	if m.searching {
 		query = m.spinner.View() + " " + dimmedStyle.Render(m.searchQuery)
 	}
 	sb.WriteString(lipgloss.NewStyle().Padding(0, 2).Render(query) + "\n\n")
+
+	_, elapsedStr := m.radioTrackProgress()
 
 	if m.result != nil {
 		symb := "▶ "
@@ -194,7 +210,8 @@ func (m OnlineModel) View() string {
 		}
 		sb.WriteString(lipgloss.NewStyle().Padding(0, 2).Render(
 			currentStyle.Render(symb+m.result.Trackname) + "\n" +
-				dimmedStyle.Render(m.result.YTVideoURL),
+				dimmedStyle.Render(m.result.YTVideoURL) + "\n" +
+				dimmedStyle.Render(elapsedStr),
 		))
 	}
 
@@ -205,6 +222,26 @@ func (m OnlineModel) View() string {
 	))
 
 	return sb.String()
+}
+
+// not getting why progress bar is not updating when
+func (m OnlineModel) radioTrackProgress() (percent float64, elapsed string) {
+	if m.current == -1 || len(m.tracks) == 0 {
+		return 0, "0:00 / 0:00"
+	}
+
+	track := m.tracks[m.current]
+
+	if track.Duration > 0 {
+		percent = float64(m.elapsed) / float64(track.Duration)
+
+		if percent > 1 {
+			percent = 1
+		}
+	}
+
+	elapsed = fmt.Sprintf("%s / %s", FormattedDuration(m.elapsed), track.FormatDuration())
+	return
 }
 
 func (m OnlineModel) playCurrent() tea.Cmd {
