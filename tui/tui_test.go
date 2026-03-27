@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"playmusic/library"
+
+	tea "github.com/charmbracelet/bubbletea"
 )
 
 func TestModelUpdateAddsDiscoveredLibraryTrack(t *testing.T) {
@@ -470,5 +472,414 @@ func TestNewModelSetsScanningStateFromChannel(t *testing.T) {
 	modelWithoutScan := NewModel(nil, nil)
 	if modelWithoutScan.scanning {
 		t.Fatal("expected model to start with scanning disabled when no scan channel is provided")
+	}
+}
+
+func TestNewModelStartsInListFocus(t *testing.T) {
+	model := NewModel(nil, nil)
+
+	if model.focus != focusList {
+		t.Fatalf("expected default focus to be focusList, got %v", model.focus)
+	}
+}
+
+func TestModelUpdateEntersSearchFocusFromListOnQOrQuestion(t *testing.T) {
+	cases := []string{"q", "?"}
+	for _, key := range cases {
+		t.Run(key, func(t *testing.T) {
+			model := NewModel(nil, nil)
+			model.focus = focusList
+
+			updatedModel, cmd := model.Update(tea.KeyMsg{
+				Type:  tea.KeyRunes,
+				Runes: []rune(key),
+			})
+			got := updatedModel.(Model)
+
+			if got.focus != focusSearch {
+				t.Fatalf("expected focusSearch after %q, got %v", key, got.focus)
+			}
+			if cmd != nil {
+				t.Fatalf("expected nil cmd on focus switch, got %v", cmd)
+			}
+		})
+	}
+}
+
+func TestModelUpdateLeavesSearchFocusOnEsc(t *testing.T) {
+	model := NewModel(nil, nil)
+	model.focus = focusSearch
+	model.searchQuery = "abc"
+
+	updatedModel, cmd := model.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	got := updatedModel.(Model)
+
+	if got.focus != focusList {
+		t.Fatalf("expected focusList after esc, got %v", got.focus)
+	}
+	if got.searchQuery != "" {
+		t.Fatalf("expected search query to be cleared on esc, got %q", got.searchQuery)
+	}
+	if cmd != nil {
+		t.Fatalf("expected nil cmd on esc focus switch, got %v", cmd)
+	}
+}
+
+func TestModelUpdateEnterInListFocusStartsPlayback(t *testing.T) {
+	model := NewModel([]library.Track{
+		{
+			Trackname: "Local Track",
+			Path:      "/music/local.mp3",
+			Filename:  "local.mp3",
+		},
+	}, nil)
+	model.focus = focusList
+
+	updatedModel, cmd := model.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	got := updatedModel.(Model)
+
+	if cmd == nil {
+		t.Fatal("expected playback cmd on enter in list focus")
+	}
+	if got.current != 0 {
+		t.Fatalf("expected current index 0 after enter in list focus, got %d", got.current)
+	}
+}
+
+func TestModelUpdateEnterInSearchFocusKeepsLocalFilterAndReturnsToList(t *testing.T) {
+	model := NewModel([]library.Track{
+		{
+			Trackname: "Beatles - Yesterday",
+			Path:      "/music/beatles.mp3",
+			Filename:  "beatles.mp3",
+		},
+		{
+			Trackname: "Metallica - One",
+			Path:      "/music/metallica.mp3",
+			Filename:  "metallica.mp3",
+		},
+	}, nil)
+	model.focus = focusSearch
+	model.searchQuery = "beatles"
+	model.updateListItems()
+
+	updatedModel, cmd := model.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	got := updatedModel.(Model)
+
+	if cmd != nil {
+		t.Fatalf("expected nil cmd on enter in search focus, got %v", cmd)
+	}
+	if got.focus != focusList {
+		t.Fatalf("expected focusList after enter in search focus, got %v", got.focus)
+	}
+	if got.searchQuery != "beatles" {
+		t.Fatalf("expected search query to be preserved on enter in search focus, got %q", got.searchQuery)
+	}
+	if len(got.list.Items()) != 1 {
+		t.Fatalf("expected filtered list to stay narrowed after enter, got %d items", len(got.list.Items()))
+	}
+}
+
+func TestModelUpdateEnterInSearchFocusWithEmptyQueryDoesNothing(t *testing.T) {
+	model := NewModel([]library.Track{
+		{
+			Trackname: "Local Track",
+			Path:      "/music/local.mp3",
+			Filename:  "local.mp3",
+		},
+	}, nil)
+	model.focus = focusSearch
+	model.searchQuery = ""
+
+	updatedModel, cmd := model.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	got := updatedModel.(Model)
+
+	if cmd != nil {
+		t.Fatalf("expected nil cmd on enter in search focus with empty query, got %v", cmd)
+	}
+	if got.focus != focusList {
+		t.Fatalf("expected focusList after enter with empty query, got %v", got.focus)
+	}
+	if got.searchQuery != "" {
+		t.Fatalf("expected search query to remain empty after enter with empty query, got %q", got.searchQuery)
+	}
+	if got.current != -1 {
+		t.Fatalf("did not expect playback selection change, got current=%d", got.current)
+	}
+}
+
+func TestModelUpdateTypingInSearchFocusFiltersListLive(t *testing.T) {
+	model := NewModel([]library.Track{
+		{Trackname: "Zen Garden", Path: "/music/zen.mp3", Filename: "zen.mp3"},
+		{Trackname: "Muse", Path: "/music/muse.mp3", Filename: "muse.mp3"},
+	}, nil)
+	model.focus = focusSearch
+
+	updatedModel, cmd := model.Update(tea.KeyMsg{
+		Type:  tea.KeyRunes,
+		Runes: []rune("z"),
+	})
+	got := updatedModel.(Model)
+
+	if cmd != nil {
+		t.Fatalf("expected nil cmd on local live filter typing, got %v", cmd)
+	}
+	if got.searchQuery != "z" {
+		t.Fatalf("expected searchQuery to be updated to %q, got %q", "z", got.searchQuery)
+	}
+	if len(got.list.Items()) != 1 {
+		t.Fatalf("expected filtered list to contain 1 item, got %d", len(got.list.Items()))
+	}
+}
+
+func TestModelUpdateTypingQOrQuestionInSearchFocusUpdatesQueryAndFilter(t *testing.T) {
+	model := NewModel([]library.Track{
+		{Trackname: "Queen - Bohemian Rhapsody", Path: "/music/queen.mp3", Filename: "queen.mp3"},
+		{Trackname: "Metallica - One", Path: "/music/metallica.mp3", Filename: "metallica.mp3"},
+	}, nil)
+	model.focus = focusSearch
+
+	updatedModel, cmd := model.Update(tea.KeyMsg{
+		Type:  tea.KeyRunes,
+		Runes: []rune("q"),
+	})
+	got := updatedModel.(Model)
+
+	if cmd != nil {
+		t.Fatalf("expected nil cmd when typing q in search focus, got %v", cmd)
+	}
+	if got.searchQuery != "q" {
+		t.Fatalf("expected searchQuery to be %q after typing q, got %q", "q", got.searchQuery)
+	}
+	if len(got.list.Items()) != 1 {
+		t.Fatalf("expected filtered list to contain 1 item after typing q, got %d", len(got.list.Items()))
+	}
+
+	updatedModel, cmd = got.Update(tea.KeyMsg{
+		Type:  tea.KeyRunes,
+		Runes: []rune("?"),
+	})
+	got = updatedModel.(Model)
+
+	if cmd != nil {
+		t.Fatalf("expected nil cmd when typing ? in search focus, got %v", cmd)
+	}
+	if got.searchQuery != "q?" {
+		t.Fatalf("expected searchQuery to be %q after typing ?, got %q", "q?", got.searchQuery)
+	}
+}
+
+func TestModelUpdateTypingInListFocusDoesNotChangeQueryOrFilter(t *testing.T) {
+	model := NewModel([]library.Track{
+		{Trackname: "Alpha", Path: "/music/alpha.mp3", Filename: "alpha.mp3"},
+		{Trackname: "Beta", Path: "/music/beta.mp3", Filename: "beta.mp3"},
+	}, nil)
+	model.focus = focusList
+
+	initialItems := len(model.list.Items())
+
+	updatedModel, _ := model.Update(tea.KeyMsg{
+		Type:  tea.KeyRunes,
+		Runes: []rune("z"),
+	})
+	got := updatedModel.(Model)
+
+	if got.searchQuery != "" {
+		t.Fatalf("expected searchQuery to stay empty in list focus, got %q", got.searchQuery)
+	}
+	if len(got.list.Items()) != initialItems {
+		t.Fatalf("expected list items to remain unchanged in list focus, got %d (want %d)", len(got.list.Items()), initialItems)
+	}
+}
+
+func TestModelUpdateBackspaceInSearchFocusUpdatesQueryAndFilter(t *testing.T) {
+	model := NewModel([]library.Track{
+		{Trackname: "Abba", Path: "/music/abba.mp3", Filename: "abba.mp3"},
+		{Trackname: "Beatles", Path: "/music/beatles.mp3", Filename: "beatles.mp3"},
+	}, nil)
+	model.focus = focusSearch
+	model.searchQuery = "abb"
+	model.updateListItems()
+
+	updatedModel, cmd := model.Update(tea.KeyMsg{Type: tea.KeyBackspace})
+	got := updatedModel.(Model)
+
+	if cmd != nil {
+		t.Fatalf("expected nil cmd on local backspace filtering, got %v", cmd)
+	}
+	if got.searchQuery != "ab" {
+		t.Fatalf("expected searchQuery to become %q after backspace, got %q", "ab", got.searchQuery)
+	}
+	if len(got.list.Items()) != 1 {
+		t.Fatalf("expected filtered list to contain 1 item after backspace, got %d", len(got.list.Items()))
+	}
+}
+
+// func TestModelUpdateIgnoresStaleSearchTrackFoundMsg(t *testing.T) {
+// 	model := NewModel([]library.Track{
+// 		{Trackname: "Local", Path: "/music/local.mp3", Filename: "local.mp3"},
+// 	}, nil)
+// 	model.searching = true
+// 	model.searchRequestID = 2
+
+// 	updatedModel, cmd := model.Update(searchTrackFoundMsg{
+// 		track: library.Track{Trackname: "Stale", Path: "/music/stale.mp3", Filename: "stale.mp3"},
+// 		reqID: 1,
+// 	})
+// 	got := updatedModel.(Model)
+
+// 	if cmd != nil {
+// 		t.Fatalf("expected nil cmd for stale searchTrackFoundMsg, got %v", cmd)
+// 	}
+// 	if len(got.tracks) != 1 {
+// 		t.Fatalf("expected stale result to be ignored, got %d tracks", len(got.tracks))
+// 	}
+// 	if !got.searching {
+// 		t.Fatal("expected searching to remain true while current request is still active")
+// 	}
+// }
+
+// func TestModelUpdateAppliesCurrentSearchTrackFoundMsg(t *testing.T) {
+// 	model := NewModel([]library.Track{
+// 		{Trackname: "Local", Path: "/music/local.mp3", Filename: "local.mp3"},
+// 	}, nil)
+// 	model.searching = true
+// 	model.searchRequestID = 2
+
+// 	updatedModel, _ := model.Update(searchTrackFoundMsg{
+// 		track: library.Track{Trackname: "Fresh", Path: "/music/fresh.mp3", Filename: "fresh.mp3"},
+// 		reqID: 2,
+// 	})
+// 	got := updatedModel.(Model)
+
+// 	if len(got.tracks) != 2 {
+// 		t.Fatalf("expected current result to be appended, got %d tracks", len(got.tracks))
+// 	}
+// 	if got.searching {
+// 		t.Fatal("expected searching to be disabled after current search result is applied")
+// 	}
+// }
+
+// func TestModelUpdateIgnoresStaleSearchDoneMsg(t *testing.T) {
+// 	model := NewModel(nil, nil)
+// 	model.searching = true
+// 	model.searchRequestID = 3
+
+// 	updatedModel, cmd := model.Update(searchDoneMsg{reqID: 2})
+// 	got := updatedModel.(Model)
+
+// 	if cmd != nil {
+// 		t.Fatalf("expected nil cmd for stale searchDoneMsg, got %v", cmd)
+// 	}
+// 	if !got.searching {
+// 		t.Fatal("expected searching to remain true for stale done message")
+// 	}
+// }
+
+// func TestModelUpdateAppliesCurrentSearchDoneMsg(t *testing.T) {
+// 	model := NewModel(nil, nil)
+// 	model.searching = true
+// 	model.searchRequestID = 3
+
+// 	updatedModel, cmd := model.Update(searchDoneMsg{reqID: 3})
+// 	got := updatedModel.(Model)
+
+// 	if cmd != nil {
+// 		t.Fatalf("expected nil cmd for current searchDoneMsg, got %v", cmd)
+// 	}
+// 	if got.searching {
+// 		t.Fatal("expected searching to be disabled for current done message")
+// 	}
+// }
+
+func TestSearchBarViewShowsListPlaceholderInListFocus(t *testing.T) {
+	model := NewModel(nil, nil)
+	model.focus = focusList
+	model.searchQuery = "beatles"
+
+	view := model.searchBarView()
+
+	if !strings.Contains(view, "Press q or ? to search") {
+		t.Fatalf("expected list-focus placeholder, got %q", view)
+	}
+	if !strings.Contains(view, "> beatles") {
+		t.Fatalf("expected applied query in list focus, got %q", view)
+	}
+	if strings.Contains(view, "Type to filter | Enter apply | Esc clear & exit") {
+		t.Fatalf("did not expect search-focus hint in list focus, got %q", view)
+	}
+}
+
+func TestSearchBarViewHidesEmptyAppliedQueryInListFocus(t *testing.T) {
+	model := NewModel(nil, nil)
+	model.focus = focusList
+	model.searchQuery = ""
+
+	view := model.searchBarView()
+
+	if !strings.Contains(view, "Press q or ? to search") {
+		t.Fatalf("expected list-focus placeholder, got %q", view)
+	}
+	if strings.Contains(view, "> ") {
+		t.Fatalf("did not expect empty applied query line in list focus, got %q", view)
+	}
+}
+
+func TestSearchBarViewShowsPromptAndQueryInSearchFocus(t *testing.T) {
+	model := NewModel(nil, nil)
+	model.focus = focusSearch
+	model.searchQuery = "beatles"
+
+	view := model.searchBarView()
+
+	if !strings.Contains(view, "> beatles") {
+		t.Fatalf("expected search prompt with query, got %q", view)
+	}
+	if strings.Contains(view, "Press q or ? to search") {
+		t.Fatalf("did not expect list placeholder in search focus, got %q", view)
+	}
+	if !strings.Contains(view, "Type to filter | Enter apply | Esc clear & exit") {
+		t.Fatalf("expected search-focus hint in top bar, got %q", view)
+	}
+	if strings.Contains(view, "> beatles  Type to filter | Enter apply | Esc clear & exit") {
+		t.Fatalf("expected hint and query on separate lines, got %q", view)
+	}
+}
+
+// func TestSearchBarViewShowsSpinnerWhenSearchingInSearchFocus(t *testing.T) {
+// 	model := NewModel(nil, nil)
+// 	model.focus = focusSearch
+// 	model.searchQuery = "beatles"
+
+// 	model.searching = false
+// 	withoutSpinner := model.searchBarView()
+
+// 	model.searching = true
+// 	withSpinner := model.searchBarView()
+
+// 	if !strings.Contains(withSpinner, "> beatles") {
+// 		t.Fatalf("expected query prompt while searching, got %q", withSpinner)
+// 	}
+// 	if withSpinner == withoutSpinner {
+// 		t.Fatalf("expected searching view to differ from non-searching view")
+// 	}
+// 	if strings.Contains(withSpinner, "Press q or ? to search") {
+// 		t.Fatalf("did not expect list placeholder while searching, got %q", withSpinner)
+// 	}
+// 	if !strings.Contains(withSpinner, "Type to filter | Enter apply | Esc clear & exit") {
+// 		t.Fatalf("expected search-focus hint while searching, got %q", withSpinner)
+// 	}
+// }
+
+func TestHelpViewShowsOnlyGlobalHotkeysWithoutSearchKeys(t *testing.T) {
+	model := NewModel(nil, nil)
+
+	view := model.helpView()
+
+	if !strings.Contains(view, "space pause/resume | enter play | ctrl+r random | up/down navigate | ctrl+q quit") {
+		t.Fatalf("expected global help text, got %q", view)
+	}
+	if strings.Contains(view, "q/? search") || strings.Contains(view, "esc") {
+		t.Fatalf("did not expect search hotkeys in bottom help, got %q", view)
 	}
 }

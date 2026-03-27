@@ -18,24 +18,31 @@ func (t trackItem) Title() string { return t.track.Trackname } // u can use some
 func (t trackItem) Description() string { return t.track.FormatDuration() }
 func (t trackItem) FilterValue() string { return t.track.Trackname }
 
-type Model struct {
-	tracks   []library.Track
-	current  int
-	elapsed  time.Duration
-	paused   bool
-	player   *Player
-	list     list.Model
-	progress progress.Model
-	width    int
-	height   int
+type focusMode int
 
-	searchQuery string
-	scanCh      <-chan library.ScanEvent
-	scanning    bool
-	scanDone    bool
-	scanError   error
-	scanAdded   int
-	isRandom    bool
+const (
+	focusList focusMode = iota
+	focusSearch
+)
+
+type Model struct {
+	tracks          []library.Track
+	current         int
+	elapsed         time.Duration
+	paused          bool
+	player          *Player
+	list            list.Model
+	progress        progress.Model
+	width           int
+	height          int
+	focus           focusMode
+	searchQuery     string
+	scanCh          <-chan library.ScanEvent
+	scanning        bool
+	scanDone        bool
+	scanError       error
+	scanAdded       int
+	isRandom        bool
 }
 
 func NewModel(tracks []library.Track, scanCh <-chan library.ScanEvent) Model {
@@ -59,6 +66,7 @@ func NewModel(tracks []library.Track, scanCh <-chan library.ScanEvent) Model {
 		player:   &Player{},
 		list:     newList,
 		progress: progress.New(progress.WithDefaultGradient()),
+		focus:    focusList,
 		scanCh:   scanCh,
 		scanning: scanCh != nil,
 	}

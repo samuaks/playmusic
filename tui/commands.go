@@ -8,12 +8,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-func debounceSearch(query string) tea.Cmd {
-	return tea.Tick(1*time.Second, func(t time.Time) tea.Msg {
-		return searchDebounceMsg{query}
-	})
-}
-
 // waitForLibraryEvent blocks until the next background-scanned track arrives.
 // if the scan channel is closed, it emits a completion message instead
 func waitForLibraryEvent(ch <-chan library.ScanEvent) tea.Cmd {
@@ -72,16 +66,15 @@ func (m Model) playCurrent() tea.Cmd {
 	}
 }
 
-/* func (m Model) runSearch(query string) tea.Cmd {
-	return func() tea.Msg {
-		tracks, err := m.searcher.Search(query)
-		if err != nil || len(tracks) == 0 {
-			return searchDoneMsg{}
-		}
-		for _, t := range tracks {
-			return searchTrackFoundMsg{track: t}
-		}
-		return searchDoneMsg{}
-	}
-}
-*/
+// func (m Model) runSearch(query string, reqID int) tea.Cmd {
+// 	return func() tea.Msg {
+// 		tracks, err := m.searcher.Search(query)
+// 		if err != nil || len(tracks) == 0 {
+// 			return searchDoneMsg{reqID: reqID}
+// 		}
+// 		for _, t := range tracks {
+// 			return searchTrackFoundMsg{track: t, reqID: reqID}
+// 		}
+// 		return searchDoneMsg{reqID: reqID}
+// 	}
+// }

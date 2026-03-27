@@ -10,7 +10,7 @@ import (
 )
 
 func (m Model) Init() tea.Cmd {
-	setTerminalTitle(TITLE + "🎶")
+	setTerminalTitle(TITLE + " ??")
 
 	return tea.Batch(
 		tick(),
@@ -54,10 +54,24 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "ctrl+q", "ctrl+c":
 			m.player.Stop()
 			return m, tea.Quit
+		case "q", "?":
+			if m.focus == focusList {
+				m.focus = focusSearch
+				return m, nil
+			}
+			if m.focus == focusSearch {
+				m.searchQuery += msg.String()
+				m.updateListItems()
+				return m, nil
+			}
 		case "esc":
-			m.searchQuery = ""
-			m.updateListItems()
-			return m, debounceSearch("")
+			if m.focus == focusSearch {
+				m.focus = focusList
+				m.searchQuery = ""
+				m.updateListItems()
+				return m, nil
+			}
+			return m, nil
 		case " ":
 			if m.paused {
 				m.player.Resume()
@@ -66,12 +80,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.player.Pause()
 				m.paused = true
 			}
-
 			return m, nil
 		case "ctrl+r":
 			m.isRandom = !m.isRandom
 			return m, nil
 		case "enter":
+			if m.focus == focusSearch {
+				m.focus = focusList
+				return m, nil
+			}
 			if _, idx, ok := m.selectedTrack(); ok && idx != m.current {
 				m.elapsed = 0
 				m.paused = false
@@ -81,33 +98,28 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, m.playCurrent()
 			}
 		case "backspace":
-			if len(m.searchQuery) > 0 {
+			if m.focus == focusSearch && len(m.searchQuery) > 0 {
 				queryRunes := []rune(m.searchQuery)
-
 				if len(queryRunes) > 0 {
 					queryRunes = queryRunes[:len(queryRunes)-1]
-
 					m.searchQuery = string(queryRunes)
 					m.updateListItems()
-					return m, debounceSearch(m.searchQuery)
+					return m, nil
 				}
 			}
 			return m, nil
 		default:
-			if len(msg.String()) > 0 {
+			if m.focus == focusSearch && len(msg.String()) > 0 {
 				runes := []rune(msg.String())
-
 				if len(runes) == 1 {
 					r := runes[0]
-
-					if unicode.IsGraphic(r) { // isGraphic handles
+					if unicode.IsGraphic(r) && msg.String() != " " {
 						m.searchQuery += msg.String()
 						m.updateListItems()
-						return m, debounceSearch(m.searchQuery)
+						return m, nil
 					}
 				}
 			}
-			//	return m, nil
 		}
 	case tickMsg:
 		if !m.paused && m.player.IsPlaying() {
@@ -122,29 +134,25 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.list.Select(m.current)
 		return m, m.playCurrent()
 
-		/* 	case spinner.TickMsg:
-		   		if m.searching {
-		   			m.spinner, cmd = m.spinner.Update(msg)
-		   			return m, cmd
-		   		}
-		   	case searchDebounceMsg:
-		   		if msg.query == m.searchQuery && msg.query != "" {
-		   			m.searching = true
-		   			m.list.SetSize(m.width, m.height-playerBarHeight-searchBarHeight-scanBarHeight)
-
-		   			return m, tea.Batch(m.runSearch(msg.query), m.spinner.Tick)
-		   		}
-		   	case searchTrackFoundMsg:
-		   		m.searching = false
-		   		m.list.SetSize(m.width, m.height-playerBarHeight-searchBarHeight-scanBarHeight)
-		   		for _, t := range m.tracks {
-		   			if t.Identifier() == msg.track.Identifier() {
-		   				return m, nil
-		   			}
-		   		}
-		   		m.tracks = append(m.tracks, msg.track)
-		   		cmd = m.list.InsertItem(len(m.tracks)-1, trackItem{msg.track})
-		   		return m, cmd */
+	// case spinner.TickMsg:
+	// 	if m.searching {
+	// 		m.spinner, cmd = m.spinner.Update(msg)
+	// 		return m, cmd
+	// 	}
+	// case searchTrackFoundMsg:
+	// 	if msg.reqID != m.searchRequestID {
+	// 		return m, nil
+	// 	}
+	// 	m.searching = false
+	// 	m.list.SetSize(m.width, m.height-playerBarHeight-searchBarHeight-scanBarHeight)
+	// 	for _, t := range m.tracks {
+	// 		if t.Identifier() == msg.track.Identifier() {
+	// 			return m, nil
+	// 		}
+	// 	}
+	// 	m.tracks = append(m.tracks, msg.track)
+	// 	cmd = m.list.InsertItem(len(m.tracks)-1, trackItem{msg.track})
+	// 	return m, cmd
 	case libraryTrackFoundMsg:
 		// Deduplicate by path because startup tracks and background scan
 		// may overlap or the scanner may revisit the same location.
@@ -171,9 +179,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.scanning = false
 		m.scanDone = true
 		return m, nil
-		/* 	case searchDoneMsg:
-		m.searching = false
-		m.list.SetSize(m.width, m.height-playerBarHeight-searchBarHeight-scanBarHeight) */
+		// case searchDoneMsg:
+		// 	if msg.reqID != m.searchRequestID {
+		// 		return m, nil
+		// 	}
+		// 	m.searching = false
+		// 	m.list.SetSize(m.width, m.height-playerBarHeight-searchBarHeight-scanBarHeight)
 	}
 
 	m.list, cmd = m.list.Update(msg)

@@ -24,12 +24,12 @@ func (m Model) playerBarView() string {
 			}
 		}
 
-		status := "▶"
+		status := ">"
 		if m.paused {
-			status = "⏸"
+			status = "||"
 		}
 		if m.isRandom {
-			status += " 🔀"
+			status += " rnd"
 		}
 
 		nowPlaying = currentStyle.Render(fmt.Sprintf("%s %s", status, track.Trackname))
@@ -42,13 +42,29 @@ func (m Model) playerBarView() string {
 
 func (m Model) searchBarView() string {
 	title := titleStyle.Padding(0, 2).Render(TITLE)
+	var hint string
 	var query string
 
-	switch {
-	case m.searchQuery == "":
-		query = dimmedStyle.Render("> " + SEARCHBAR_TEXT)
+	switch m.focus {
+	case focusList:
+		hint = lipgloss.NewStyle().Padding(0, 2).Render(dimmedStyle.Render(SEARCHBAR_LIST_PLACEHOLDER))
+		if m.searchQuery != "" {
+			query = dimmedStyle.Render("> " + m.searchQuery)
+		}
+	case focusSearch:
+		hint = lipgloss.NewStyle().Padding(0, 2).Render(dimmedStyle.Render(SEARCHBAR_SEARCH_HINT))
+		base := dimmedStyle.Render("> " + m.searchQuery)
+		query = base
 	default:
-		query = dimmedStyle.Render("> ") + dimmedStyle.Render(m.searchQuery)
+		query = dimmedStyle.Render(SEARCHBAR_LIST_PLACEHOLDER)
+	}
+
+	if hint != "" {
+		if query == "" {
+			return fmt.Sprintf("%s\n%s\n", title, hint)
+		}
+		input := lipgloss.NewStyle().Padding(0, 2).Render(query)
+		return fmt.Sprintf("%s\n%s\n%s\n", title, hint, input)
 	}
 	input := lipgloss.NewStyle().Padding(0, 2).Render(query)
 	return fmt.Sprintf("%s\n%s\n", title, input)
@@ -73,5 +89,5 @@ func (m Model) libraryScanStatusView() string {
 }
 
 func (m Model) helpView() string {
-	return dimmedStyle.Render(HELP_TEXT)
+	return dimmedStyle.Render(GLOBAL_HELP_TEXT)
 }
