@@ -570,6 +570,12 @@ func TestModelUpdateEnterInSearchFocusRunsSearch(t *testing.T) {
 	if !got.searching {
 		t.Fatal("expected searching state to be enabled on enter in search focus")
 	}
+	if got.focus != focusList {
+		t.Fatalf("expected focusList after enter in search focus, got %v", got.focus)
+	}
+	if got.searchQuery != "" {
+		t.Fatalf("expected search query to be cleared on enter in search focus, got %q", got.searchQuery)
+	}
 	if got.current != -1 {
 		t.Fatalf("did not expect playback selection change in search focus, got current=%d", got.current)
 	}
@@ -594,6 +600,12 @@ func TestModelUpdateEnterInSearchFocusWithEmptyQueryDoesNothing(t *testing.T) {
 	}
 	if got.searching {
 		t.Fatal("expected searching state to remain false with empty query")
+	}
+	if got.focus != focusList {
+		t.Fatalf("expected focusList after enter with empty query, got %v", got.focus)
+	}
+	if got.searchQuery != "" {
+		t.Fatalf("expected search query to remain empty after enter with empty query, got %q", got.searchQuery)
 	}
 	if got.current != -1 {
 		t.Fatalf("did not expect playback selection change, got current=%d", got.current)
