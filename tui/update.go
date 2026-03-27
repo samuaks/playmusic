@@ -6,7 +6,6 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
@@ -135,25 +134,25 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.list.Select(m.current)
 		return m, m.playCurrent()
 
-	case spinner.TickMsg:
-		if m.searching {
-			m.spinner, cmd = m.spinner.Update(msg)
-			return m, cmd
-		}
-	case searchTrackFoundMsg:
-		if msg.reqID != m.searchRequestID {
-			return m, nil
-		}
-		m.searching = false
-		m.list.SetSize(m.width, m.height-playerBarHeight-searchBarHeight-scanBarHeight)
-		for _, t := range m.tracks {
-			if t.Identifier() == msg.track.Identifier() {
-				return m, nil
-			}
-		}
-		m.tracks = append(m.tracks, msg.track)
-		cmd = m.list.InsertItem(len(m.tracks)-1, trackItem{msg.track})
-		return m, cmd
+	// case spinner.TickMsg:
+	// 	if m.searching {
+	// 		m.spinner, cmd = m.spinner.Update(msg)
+	// 		return m, cmd
+	// 	}
+	// case searchTrackFoundMsg:
+	// 	if msg.reqID != m.searchRequestID {
+	// 		return m, nil
+	// 	}
+	// 	m.searching = false
+	// 	m.list.SetSize(m.width, m.height-playerBarHeight-searchBarHeight-scanBarHeight)
+	// 	for _, t := range m.tracks {
+	// 		if t.Identifier() == msg.track.Identifier() {
+	// 			return m, nil
+	// 		}
+	// 	}
+	// 	m.tracks = append(m.tracks, msg.track)
+	// 	cmd = m.list.InsertItem(len(m.tracks)-1, trackItem{msg.track})
+	// 	return m, cmd
 	case libraryTrackFoundMsg:
 		// Deduplicate by path because startup tracks and background scan
 		// may overlap or the scanner may revisit the same location.
@@ -180,12 +179,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.scanning = false
 		m.scanDone = true
 		return m, nil
-	case searchDoneMsg:
-		if msg.reqID != m.searchRequestID {
-			return m, nil
-		}
-		m.searching = false
-		m.list.SetSize(m.width, m.height-playerBarHeight-searchBarHeight-scanBarHeight)
+		// case searchDoneMsg:
+		// 	if msg.reqID != m.searchRequestID {
+		// 		return m, nil
+		// 	}
+		// 	m.searching = false
+		// 	m.list.SetSize(m.width, m.height-playerBarHeight-searchBarHeight-scanBarHeight)
 	}
 
 	m.list, cmd = m.list.Update(msg)

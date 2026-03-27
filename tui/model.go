@@ -3,13 +3,10 @@ package tui
 import (
 	"playmusic/library"
 	. "playmusic/player"
-	"playmusic/search"
 	"time"
 
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/progress"
-	"github.com/charmbracelet/bubbles/spinner"
-	"github.com/charmbracelet/lipgloss"
 )
 
 type trackItem struct {
@@ -39,9 +36,6 @@ type Model struct {
 	width           int
 	height          int
 	focus           focusMode
-	searcher        *search.Searcher
-	spinner         spinner.Model
-	searching       bool
 	searchQuery     string
 	searchRequestID int
 	scanCh          <-chan library.ScanEvent
@@ -67,10 +61,6 @@ func NewModel(tracks []library.Track, scanCh <-chan library.ScanEvent) Model {
 
 	newList.Styles.NoItems = emptyStyle
 
-	s := spinner.New()
-	s.Spinner = spinner.Dot
-	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("86"))
-
 	return Model{
 		current:  -1,
 		tracks:   tracks,
@@ -78,8 +68,6 @@ func NewModel(tracks []library.Track, scanCh <-chan library.ScanEvent) Model {
 		list:     newList,
 		progress: progress.New(progress.WithDefaultGradient()),
 		focus:    focusList,
-		searcher: search.New(search.YTSource{}),
-		spinner:  s,
 		scanCh:   scanCh,
 		scanning: scanCh != nil,
 	}
