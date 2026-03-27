@@ -49,9 +49,10 @@ type Model struct {
 	scanDone        bool
 	scanError       error
 	scanAdded       int
+	isRandom        bool
 }
 
-func NewModel(tracks []library.Track, searcher *search.Searcher, scanCh <-chan library.ScanEvent) Model {
+func NewModel(tracks []library.Track, scanCh <-chan library.ScanEvent) Model {
 	items := make([]list.Item, len(tracks))
 
 	for i, t := range tracks {
@@ -77,7 +78,7 @@ func NewModel(tracks []library.Track, searcher *search.Searcher, scanCh <-chan l
 		list:     newList,
 		progress: progress.New(progress.WithDefaultGradient()),
 		focus:    focusList,
-		searcher: searcher,
+		searcher: search.New(search.YTSource{}),
 		spinner:  s,
 		scanCh:   scanCh,
 		scanning: scanCh != nil,

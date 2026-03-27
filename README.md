@@ -12,15 +12,16 @@ A modular command-line media player written in Go. Uses [beep](https://github.co
 
 ## Supported Formats
 
-| Format | Requires FFmpeg |
-|--------|----------------|
-| .mp3   | No |
-| .flac  | No |
-| .wav   | No |
-| .ogg   | No |
-| .m4a   | Yes |
-| .aac   | Yes |
-| .opus  | Yes |
+| Format     | Requires FFmpeg |
+|------------|----------------|
+| .mp3       | No |
+| .flac      | No |
+| .wav       | No |
+| .ogg       | No |
+| .m4a       | Yes |
+| .aac       | Yes |
+| .opus      | Yes |
+| streaming  | Yes |
 
 
 ## Roadmap

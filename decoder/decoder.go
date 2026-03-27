@@ -3,16 +3,17 @@ package decoder
 import (
 	"bytes"
 	"encoding/binary"
-	"encoding/json"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"playmusic/ffmpeg"
 	"playmusic/yt_dlp"
-	"strconv"
 	"strings"
 	"time"
+
+	ff "github.com/u2takey/ffmpeg-go"
 
 	"github.com/gopxl/beep/v2"
 	"github.com/gopxl/beep/v2/flac"
@@ -22,6 +23,12 @@ import (
 )
 
 var ffmpegAvailable bool
+
+type ProdFFmpeg struct{}
+
+func (pr ProdFFmpeg) Probe(path string) (string, error) {
+	return ff.Probe(path)
+}
 
 func init() {
 	_, err := exec.LookPath("ffmpeg")
@@ -81,8 +88,9 @@ func Decode(path string) (beep.StreamSeekCloser, beep.Format, error) {
 	if !IsFFmpegAvailable() {
 		return nil, beep.Format{}, fmt.Errorf("unsupported file format: %s and ffmpeg is not available", ext)
 	}
-	return decodeWithFFmpeg(path)
 
+	prodFF := ProdFFmpeg{}
+	return decodeWithFFmpeg(prodFF, path)
 }
 
 type readSeekCloser struct {
@@ -99,35 +107,8 @@ func (b bufferedStreamer) Close() error {
 
 func (r readSeekCloser) Close() error { return nil }
 
-func getSourceSampleRate(path string) (int, error) {
-	cmd := exec.Command("ffprobe",
-		"-v", "quiet",
-		"-print_format", "json",
-		"-show_streams",
-		path,
-	)
-	out, err := cmd.Output()
-	if err != nil {
-		return 44100, err
-	}
-
-	var result struct {
-		Streams []struct {
-			SampleRate string `json:"sample_rate"`
-		} `json:"streams"`
-	}
-	if err := json.Unmarshal(out, &result); err != nil || len(result.Streams) == 0 {
-		return 44100, fmt.Errorf("could not parse ffprobe output: %w", err)
-	}
-	sampleRate, err := strconv.Atoi(result.Streams[0].SampleRate)
-	if err != nil {
-		return 44100, fmt.Errorf("invalid sample rate in ffprobe output: %w", err)
-	}
-	return sampleRate, nil
-}
-
-func decodeWithFFmpeg(path string) (beep.StreamSeekCloser, beep.Format, error) {
-	sampleRate, _ := getSourceSampleRate(path)
+func decodeWithFFmpeg(ffInt ffmpeg.FFmpegInterface, path string) (beep.StreamSeekCloser, beep.Format, error) {
+	sampleRate, _ := ffmpeg.GetSourceSampleRateFFmpeg(ffInt, path)
 
 	tmp, err := os.CreateTemp("", "musicplayer-*.wav")
 	if err != nil {
@@ -136,9 +117,7 @@ func decodeWithFFmpeg(path string) (beep.StreamSeekCloser, beep.Format, error) {
 	tmpPath := tmp.Name()
 	tmp.Close()
 
-	cmd := exec.Command("ffmpeg", "-i", path, "-f", "wav", "-ar", strconv.Itoa(sampleRate), "-ac", "2", "-y", tmpPath)
-	cmd.Stderr = io.Discard
-	if err := cmd.Run(); err != nil {
+	if err := ffmpeg.ConvertToWav(path, tmpPath, sampleRate); err != nil {
 		os.Remove(tmpPath)
 		return nil, beep.Format{}, err
 	}
@@ -161,35 +140,25 @@ func decodeWithFFmpeg(path string) (beep.StreamSeekCloser, beep.Format, error) {
 // it is actual streaming: yt-dlp returns stream with bytes and ffmpeg decodes it on the fly,
 // so there is no need to wait until the whole file is downloaded
 func DecodeStreamUrl(url string) (beep.Streamer, beep.Format, func(), error) {
+	if !IsFFmpegAvailable() {
+		err := fmt.Errorf("Can't docode stream without ffmpeg.")
+		return nil, beep.Format{}, nil, err
+	}
+
 	ytdlpOut, ytdlpCmd, err := yt_dlp.GetAudioStreamPipe(url)
 	if err != nil {
 		return nil, beep.Format{}, nil, err
 	}
 
-	ffmpeg := exec.Command(
-		"ffmpeg",
-		"-i", "pipe:0",
-		"-f", "s16le",
-		"-ac", "2",
-		"-ar", "44100",
-		"pipe:1",
-	)
-	ffmpeg.Stderr = io.Discard
-	ffmpeg.Stdin = ytdlpOut
-
-	ffmpegOut, err := ffmpeg.StdoutPipe()
+	ffmpegOut, ffmpegCmd, err := ffmpeg.StreamFromPipe(ytdlpOut)
 	if err != nil {
 		return nil, beep.Format{}, nil, err
 	}
 
 	closeFn := func() {
 		//killing downstrean first and then upstream is the right way
-		closePipeKillProcess(ffmpegOut, ffmpeg)
+		closePipeKillProcess(ffmpegOut, ffmpegCmd)
 		closePipeKillProcess(ytdlpOut, ytdlpCmd)
-	}
-
-	if err := ffmpeg.Start(); err != nil {
-		return nil, beep.Format{}, closeFn, err
 	}
 
 	// PCM format: 44100 Hz, 2 channels, signed 16-bit
@@ -253,32 +222,9 @@ func ProbeDuration(path string) (time.Duration, error) {
 	if !IsFFmpegAvailable() {
 		return 0, fmt.Errorf("could not determine duration and ffmpeg is not available")
 	}
-	return probeWithFFprobe(path)
-}
 
-type ffprobeOutput struct {
-	Format struct {
-		Duration string `json:"duration"`
-	} `json:"format"`
-}
-
-func probeWithFFprobe(path string) (time.Duration, error) {
-	command := exec.Command("ffprobe", "-v", "quiet", "-print_format", "json", "-show_format", path)
-	output, err := command.Output()
-	if err != nil {
-		return 0, err
-	}
-
-	var result ffprobeOutput
-	if err := json.Unmarshal(output, &result); err != nil {
-		return 0, err
-	}
-	seconds, err := strconv.ParseFloat(result.Format.Duration, 64)
-	if err != nil {
-		return 0, err
-	}
-
-	return time.Duration(seconds * float64(time.Second)), nil
+	prodFF := ProdFFmpeg{}
+	return ffmpeg.ProbeDurationFFmpeg(prodFF, path)
 }
 
 func closePipeKillProcess(pipe io.ReadCloser, cmd *exec.Cmd) {

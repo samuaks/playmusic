@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"math/rand"
 	. "playmusic/library"
 	"strings"
 
@@ -66,6 +67,17 @@ func (m Model) findNext() int {
 	filtered := m.filteredTracks()
 
 	if len(filtered) == 0 {
+		return m.current
+	}
+
+	if m.isRandom {
+		randomTrack := filtered[rand.Intn(len(filtered))]
+
+		for i, t := range m.tracks {
+			if t.Path == randomTrack.Path {
+				return i
+			}
+		}
 		return m.current
 	}
 

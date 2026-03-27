@@ -24,9 +24,12 @@ func (m Model) playerBarView() string {
 			}
 		}
 
-		status := "▶"
+		status := ">"
 		if m.paused {
-			status = "⏸"
+			status = "||"
+		}
+		if m.isRandom {
+			status += " rnd"
 		}
 
 		nowPlaying = currentStyle.Render(fmt.Sprintf("%s %s", status, track.Trackname))

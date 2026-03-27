@@ -6,10 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"playmusic/library"
-	"playmusic/search"
-
 	tea "github.com/charmbracelet/bubbletea"
+	"playmusic/library"
 )
 
 func TestModelUpdateAddsDiscoveredLibraryTrack(t *testing.T) {
@@ -22,7 +20,7 @@ func TestModelUpdateAddsDiscoveredLibraryTrack(t *testing.T) {
 	}
 
 	scanCh := make(chan library.ScanEvent)
-	model := NewModel(initial, search.New(search.MockSource{}), scanCh)
+	model := NewModel(initial, scanCh)
 
 	updatedModel, cmd := model.Update(libraryTrackFoundMsg{
 		track: library.Track{
@@ -55,7 +53,7 @@ func TestModelUpdateSkipsDuplicateDiscoveredLibraryTrack(t *testing.T) {
 	}
 
 	scanCh := make(chan library.ScanEvent)
-	model := NewModel(initial, search.New(search.MockSource{}), scanCh)
+	model := NewModel(initial, scanCh)
 
 	updatedModel, cmd := model.Update(libraryTrackFoundMsg{
 		track: library.Track{
@@ -85,7 +83,7 @@ func TestModelUpdateReplacesTrackOnLibraryTrackUpdatedMsg(t *testing.T) {
 	}
 
 	scanCh := make(chan library.ScanEvent)
-	model := NewModel(initial, search.New(search.MockSource{}), scanCh)
+	model := NewModel(initial, scanCh)
 
 	updatedModel, cmd := model.Update(libraryTrackUpdatedMsg{
 		track: library.Track{
@@ -116,7 +114,7 @@ func TestModelUpdateReplacesTrackOnLibraryTrackUpdatedMsg(t *testing.T) {
 
 func TestModelUpdateAppendsUpdatedTrackWhenOriginalMissing(t *testing.T) {
 	scanCh := make(chan library.ScanEvent)
-	model := NewModel(nil, search.New(search.MockSource{}), scanCh)
+	model := NewModel(nil, scanCh)
 
 	updatedModel, cmd := model.Update(libraryTrackUpdatedMsg{
 		track: library.Track{
@@ -145,7 +143,7 @@ func TestModelUpdateAppendsUpdatedTrackWhenOriginalMissing(t *testing.T) {
 }
 
 func TestModelUpdateKeepsWaitingAfterLibraryScanError(t *testing.T) {
-	model := NewModel(nil, search.New(search.MockSource{}), make(chan library.ScanEvent))
+	model := NewModel(nil, make(chan library.ScanEvent))
 
 	updatedModel, cmd := model.Update(libraryScanErrorMsg{
 		err: errors.New("scan failed"),
@@ -163,7 +161,7 @@ func TestModelUpdateKeepsWaitingAfterLibraryScanError(t *testing.T) {
 }
 
 func TestModelUpdateStopsWaitingWhenLibraryScanDone(t *testing.T) {
-	model := NewModel(nil, search.New(search.MockSource{}), make(chan library.ScanEvent))
+	model := NewModel(nil, make(chan library.ScanEvent))
 
 	updatedModel, cmd := model.Update(libraryScanDoneMsg{})
 
@@ -182,7 +180,7 @@ func TestModelUpdateStopsWaitingWhenLibraryScanDone(t *testing.T) {
 }
 
 func TestModelUpdateTracksAddedFromBackgroundScan(t *testing.T) {
-	model := NewModel(nil, search.New(search.MockSource{}), make(chan library.ScanEvent))
+	model := NewModel(nil, make(chan library.ScanEvent))
 
 	updatedModel, _ := model.Update(libraryTrackFoundMsg{
 		track: library.Track{
@@ -199,7 +197,7 @@ func TestModelUpdateTracksAddedFromBackgroundScan(t *testing.T) {
 }
 
 func TestLibraryScanStatusViewShowsActiveState(t *testing.T) {
-	model := NewModel(nil, search.New(search.MockSource{}), make(chan library.ScanEvent))
+	model := NewModel(nil, make(chan library.ScanEvent))
 	model.scanning = true
 	model.scanAdded = 2
 
@@ -210,7 +208,7 @@ func TestLibraryScanStatusViewShowsActiveState(t *testing.T) {
 }
 
 func TestLibraryScanStatusViewShowsDoneState(t *testing.T) {
-	model := NewModel(nil, search.New(search.MockSource{}), nil)
+	model := NewModel(nil, nil)
 	model.scanDone = true
 	model.scanAdded = 3
 
@@ -221,7 +219,7 @@ func TestLibraryScanStatusViewShowsDoneState(t *testing.T) {
 }
 
 func TestLibraryScanStatusViewShowsWarningState(t *testing.T) {
-	model := NewModel(nil, search.New(search.MockSource{}), make(chan library.ScanEvent))
+	model := NewModel(nil, make(chan library.ScanEvent))
 	model.scanning = true
 	model.scanError = errors.New("scan failed")
 
@@ -299,7 +297,7 @@ func TestWaitForLibraryEventReturnsTrackUpdatedMsgForEnrichedEvent(t *testing.T)
 
 func TestModelUpdateKeepsWaitingAfterLibraryTrackFoundMsg(t *testing.T) {
 	scanCh := make(chan library.ScanEvent)
-	model := NewModel(nil, search.New(search.MockSource{}), scanCh)
+	model := NewModel(nil, scanCh)
 
 	updatedModel, cmd := model.Update(libraryTrackFoundMsg{
 		track: library.Track{
@@ -324,7 +322,7 @@ func TestModelUpdateKeepsWaitingAfterLibraryTrackUpdatedMsg(t *testing.T) {
 		Trackname: "song.mp3",
 		Path:      "/music/song.mp3",
 		Filename:  "song.mp3",
-	}}, search.New(search.MockSource{}), scanCh)
+	}}, scanCh)
 
 	updatedModel, cmd := model.Update(libraryTrackUpdatedMsg{
 		track: library.Track{
@@ -455,7 +453,7 @@ func TestWaitForLibraryEventReturnsScanDoneMsgWhenChannelClosed(t *testing.T) {
 }
 
 func TestModelInitReturnsStartupCmd(t *testing.T) {
-	model := NewModel(nil, search.New(search.MockSource{}), make(chan library.ScanEvent))
+	model := NewModel(nil, make(chan library.ScanEvent))
 
 	cmd := model.Init()
 
@@ -465,19 +463,19 @@ func TestModelInitReturnsStartupCmd(t *testing.T) {
 }
 
 func TestNewModelSetsScanningStateFromChannel(t *testing.T) {
-	modelWithScan := NewModel(nil, search.New(search.MockSource{}), make(chan library.ScanEvent))
+	modelWithScan := NewModel(nil, make(chan library.ScanEvent))
 	if !modelWithScan.scanning {
 		t.Fatal("expected model to start in scanning state when scan channel is provided")
 	}
 
-	modelWithoutScan := NewModel(nil, search.New(search.MockSource{}), nil)
+	modelWithoutScan := NewModel(nil, nil)
 	if modelWithoutScan.scanning {
 		t.Fatal("expected model to start with scanning disabled when no scan channel is provided")
 	}
 }
 
 func TestNewModelStartsInListFocus(t *testing.T) {
-	model := NewModel(nil, search.New(search.MockSource{}), nil)
+	model := NewModel(nil, nil)
 
 	if model.focus != focusList {
 		t.Fatalf("expected default focus to be focusList, got %v", model.focus)
@@ -488,7 +486,7 @@ func TestModelUpdateEntersSearchFocusFromListOnQOrQuestion(t *testing.T) {
 	cases := []string{"q", "?"}
 	for _, key := range cases {
 		t.Run(key, func(t *testing.T) {
-			model := NewModel(nil, search.New(search.MockSource{}), nil)
+			model := NewModel(nil, nil)
 			model.focus = focusList
 
 			updatedModel, cmd := model.Update(tea.KeyMsg{
@@ -508,7 +506,7 @@ func TestModelUpdateEntersSearchFocusFromListOnQOrQuestion(t *testing.T) {
 }
 
 func TestModelUpdateLeavesSearchFocusOnEsc(t *testing.T) {
-	model := NewModel(nil, search.New(search.MockSource{}), nil)
+	model := NewModel(nil, nil)
 	model.focus = focusSearch
 	model.searchQuery = "abc"
 
@@ -533,7 +531,7 @@ func TestModelUpdateEnterInListFocusStartsPlayback(t *testing.T) {
 			Path:      "/music/local.mp3",
 			Filename:  "local.mp3",
 		},
-	}, search.New(search.MockSource{}), nil)
+	}, nil)
 	model.focus = focusList
 
 	updatedModel, cmd := model.Update(tea.KeyMsg{Type: tea.KeyEnter})
@@ -557,7 +555,7 @@ func TestModelUpdateEnterInSearchFocusRunsSearch(t *testing.T) {
 			Path:      "/music/local.mp3",
 			Filename:  "local.mp3",
 		},
-	}, search.New(search.MockSource{}), nil)
+	}, nil)
 	model.focus = focusSearch
 	model.searchQuery = "beatles"
 
@@ -588,7 +586,7 @@ func TestModelUpdateEnterInSearchFocusWithEmptyQueryDoesNothing(t *testing.T) {
 			Path:      "/music/local.mp3",
 			Filename:  "local.mp3",
 		},
-	}, search.New(search.MockSource{}), nil)
+	}, nil)
 	model.focus = focusSearch
 	model.searchQuery = ""
 
@@ -616,7 +614,7 @@ func TestModelUpdateTypingInSearchFocusFiltersListLive(t *testing.T) {
 	model := NewModel([]library.Track{
 		{Trackname: "Zen Garden", Path: "/music/zen.mp3", Filename: "zen.mp3"},
 		{Trackname: "Muse", Path: "/music/muse.mp3", Filename: "muse.mp3"},
-	}, search.New(search.MockSource{}), nil)
+	}, nil)
 	model.focus = focusSearch
 
 	updatedModel, cmd := model.Update(tea.KeyMsg{
@@ -640,7 +638,7 @@ func TestModelUpdateTypingQOrQuestionInSearchFocusUpdatesQueryAndFilter(t *testi
 	model := NewModel([]library.Track{
 		{Trackname: "Queen - Bohemian Rhapsody", Path: "/music/queen.mp3", Filename: "queen.mp3"},
 		{Trackname: "Metallica - One", Path: "/music/metallica.mp3", Filename: "metallica.mp3"},
-	}, search.New(search.MockSource{}), nil)
+	}, nil)
 	model.focus = focusSearch
 
 	updatedModel, cmd := model.Update(tea.KeyMsg{
@@ -677,7 +675,7 @@ func TestModelUpdateTypingInListFocusDoesNotChangeQueryOrFilter(t *testing.T) {
 	model := NewModel([]library.Track{
 		{Trackname: "Alpha", Path: "/music/alpha.mp3", Filename: "alpha.mp3"},
 		{Trackname: "Beta", Path: "/music/beta.mp3", Filename: "beta.mp3"},
-	}, search.New(search.MockSource{}), nil)
+	}, nil)
 	model.focus = focusList
 
 	initialItems := len(model.list.Items())
@@ -700,7 +698,7 @@ func TestModelUpdateBackspaceInSearchFocusUpdatesQueryAndFilter(t *testing.T) {
 	model := NewModel([]library.Track{
 		{Trackname: "Abba", Path: "/music/abba.mp3", Filename: "abba.mp3"},
 		{Trackname: "Beatles", Path: "/music/beatles.mp3", Filename: "beatles.mp3"},
-	}, search.New(search.MockSource{}), nil)
+	}, nil)
 	model.focus = focusSearch
 	model.searchQuery = "abb"
 	model.updateListItems()
@@ -722,7 +720,7 @@ func TestModelUpdateBackspaceInSearchFocusUpdatesQueryAndFilter(t *testing.T) {
 func TestModelUpdateIgnoresStaleSearchTrackFoundMsg(t *testing.T) {
 	model := NewModel([]library.Track{
 		{Trackname: "Local", Path: "/music/local.mp3", Filename: "local.mp3"},
-	}, search.New(search.MockSource{}), nil)
+	}, nil)
 	model.searching = true
 	model.searchRequestID = 2
 
@@ -746,7 +744,7 @@ func TestModelUpdateIgnoresStaleSearchTrackFoundMsg(t *testing.T) {
 func TestModelUpdateAppliesCurrentSearchTrackFoundMsg(t *testing.T) {
 	model := NewModel([]library.Track{
 		{Trackname: "Local", Path: "/music/local.mp3", Filename: "local.mp3"},
-	}, search.New(search.MockSource{}), nil)
+	}, nil)
 	model.searching = true
 	model.searchRequestID = 2
 
@@ -765,7 +763,7 @@ func TestModelUpdateAppliesCurrentSearchTrackFoundMsg(t *testing.T) {
 }
 
 func TestModelUpdateIgnoresStaleSearchDoneMsg(t *testing.T) {
-	model := NewModel(nil, search.New(search.MockSource{}), nil)
+	model := NewModel(nil, nil)
 	model.searching = true
 	model.searchRequestID = 3
 
@@ -781,7 +779,7 @@ func TestModelUpdateIgnoresStaleSearchDoneMsg(t *testing.T) {
 }
 
 func TestModelUpdateAppliesCurrentSearchDoneMsg(t *testing.T) {
-	model := NewModel(nil, search.New(search.MockSource{}), nil)
+	model := NewModel(nil, nil)
 	model.searching = true
 	model.searchRequestID = 3
 
@@ -797,7 +795,7 @@ func TestModelUpdateAppliesCurrentSearchDoneMsg(t *testing.T) {
 }
 
 func TestSearchBarViewShowsListPlaceholderInListFocus(t *testing.T) {
-	model := NewModel(nil, search.New(search.MockSource{}), nil)
+	model := NewModel(nil, nil)
 	model.focus = focusList
 	model.searchQuery = "beatles"
 
@@ -815,7 +813,7 @@ func TestSearchBarViewShowsListPlaceholderInListFocus(t *testing.T) {
 }
 
 func TestSearchBarViewShowsPromptAndQueryInSearchFocus(t *testing.T) {
-	model := NewModel(nil, search.New(search.MockSource{}), nil)
+	model := NewModel(nil, nil)
 	model.focus = focusSearch
 	model.searchQuery = "beatles"
 	model.searching = false
@@ -837,7 +835,7 @@ func TestSearchBarViewShowsPromptAndQueryInSearchFocus(t *testing.T) {
 }
 
 func TestSearchBarViewShowsSpinnerWhenSearchingInSearchFocus(t *testing.T) {
-	model := NewModel(nil, search.New(search.MockSource{}), nil)
+	model := NewModel(nil, nil)
 	model.focus = focusSearch
 	model.searchQuery = "beatles"
 
@@ -862,11 +860,11 @@ func TestSearchBarViewShowsSpinnerWhenSearchingInSearchFocus(t *testing.T) {
 }
 
 func TestHelpViewShowsOnlyGlobalHotkeysWithoutSearchKeys(t *testing.T) {
-	model := NewModel(nil, search.New(search.MockSource{}), nil)
+	model := NewModel(nil, nil)
 
 	view := model.helpView()
 
-	if !strings.Contains(view, "space pause/resume | enter play | up/down navigate | ctrl+q quit") {
+	if !strings.Contains(view, "space pause/resume | enter play | ctrl+r random | up/down navigate | ctrl+q quit") {
 		t.Fatalf("expected global help text, got %q", view)
 	}
 	if strings.Contains(view, "q/? search") || strings.Contains(view, "esc") {
