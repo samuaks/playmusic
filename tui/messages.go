@@ -8,10 +8,6 @@ import (
 type tickMsg time.Time
 type trackDoneMsg struct{}
 
-type searchDebounceMsg struct {
-	query string
-}
-
 // searchTrackFoundMsg carries a track returned by the search subsystem.
 type searchTrackFoundMsg struct {
 	track library.Track

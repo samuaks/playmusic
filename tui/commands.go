@@ -8,12 +8,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-func debounceSearch(query string) tea.Cmd {
-	return tea.Tick(1*time.Second, func(t time.Time) tea.Msg {
-		return searchDebounceMsg{query}
-	})
-}
-
 // waitForLibraryEvent blocks until the next background-scanned track arrives.
 // if the scan channel is closed, it emits a completion message instead
 func waitForLibraryEvent(ch <-chan library.ScanEvent) tea.Cmd {

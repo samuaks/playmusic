@@ -100,7 +100,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if len(m.searchQuery) > 0 {
 				m.searchQuery = m.searchQuery[:len(m.searchQuery)-1]
 				m.updateListItems()
-				return m, debounceSearch(m.searchQuery)
+				return m, nil
 			}
 			return m, nil
 		default:
@@ -109,7 +109,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if unicode.IsLetter(r) || unicode.IsNumber(r) || unicode.IsPunct(r) {
 					m.searchQuery += msg.String()
 					m.updateListItems()
-					return m, debounceSearch(m.searchQuery)
+					return m, nil
 				}
 			}
 		}
@@ -130,13 +130,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.searching {
 			m.spinner, cmd = m.spinner.Update(msg)
 			return m, cmd
-		}
-	case searchDebounceMsg:
-		if msg.query == m.searchQuery && msg.query != "" {
-			m.searching = true
-			m.list.SetSize(m.width, m.height-playerBarHeight-searchBarHeight-scanBarHeight)
-
-			return m, tea.Batch(m.runSearch(msg.query), m.spinner.Tick)
 		}
 	case searchTrackFoundMsg:
 		m.searching = false
