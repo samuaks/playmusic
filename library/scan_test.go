@@ -237,6 +237,12 @@ func TestScanForMediaSkipsMissingDirs(t *testing.T) {
 	if len(enriched) != 1 {
 		t.Fatalf("expected scanner to skip missing dir and emit 1 enriched event, got %d", len(enriched))
 	}
+
+	for _, evt := range events {
+		if evt.Err != nil {
+			t.Fatalf("expected missing dir to be skipped without error events, got %v", evt.Err)
+		}
+	}
 }
 
 func TestScanForMediaPopulatesBasicTrackFields(t *testing.T) {

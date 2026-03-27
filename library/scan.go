@@ -46,6 +46,10 @@ func ScanForMedia(ctx context.Context, dirs []string, out chan<- ScanEvent) {
 
 		err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, walkErr error) error {
 			if walkErr != nil {
+				if os.IsNotExist(walkErr) {
+					return nil
+				}
+
 				select {
 				case <-ctx.Done():
 					return ctx.Err()
