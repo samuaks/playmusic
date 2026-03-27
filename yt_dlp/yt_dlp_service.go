@@ -117,7 +117,7 @@ func GetMusicJamPlaylistWithQuery(query string) ([]TrackInfo, error) {
 	ytdlpCommand = ytdlpCommand.
 		NoWarnings().
 		Quiet().
-		MatchFilters("duration > 120 & duration < 600").
+		MatchFilters("duration > 120 & duration < 540").
 		Print("%(webpage_url)s<<>>%(uploader)s<<>>%(title)s<<>>%(duration)s")
 
 	out, err := ytdlpCommand.Run(context.TODO(), "ytsearch20:"+query+" topic ") //20 results

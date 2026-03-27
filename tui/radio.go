@@ -148,7 +148,7 @@ func (m *OnlineModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.current++
 		m.elapsed = 0
 
-		if m.current > len(m.tracks) {
+		if m.current >= len(m.tracks) {
 			m.current = len(m.tracks) - 1
 		}
 		m.result = &m.tracks[m.current]
