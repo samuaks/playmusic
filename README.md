@@ -54,6 +54,15 @@ go build
 Drop your media files into the `Media` directory and they will be played in order.
 Player will also search for the music in common places in your PC and will add them to the playlist.
 
+## Hotkeys
+
+- `up/down` - navigate list
+- `space` - pause/resume
+- `enter` in list focus - play selected track
+- `q` or `?` - enter search focus
+- `enter` in search focus - run external search (if query is not empty), then return to list focus
+- `esc` in search focus - clear query and return to list focus
+
 ## Requirements
 
 - Go 1.21 or later
