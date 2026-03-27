@@ -95,7 +95,7 @@ func TestShouldGetListOfTracks(t *testing.T) {
 
 	SetBinaryPath(resInst.Executable)
 
-	out, err := GetMusicJamPlaylistWithQuery("the weeknd")
+	out, err := GetMusicJamPlaylistWithQueryJson("the weeknd")
 	if err != nil {
 		t.Fatalf("Failed to receive list of tracks: %v", err)
 	}

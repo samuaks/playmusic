@@ -106,7 +106,7 @@ func GetYTVideoInfo(query string) (string, string, time.Duration, error) {
 	return extractInfoFromResult(*out)
 }
 
-func GetMusicJamPlaylistWithQuery(query string) ([]TrackInfo, error) {
+func GetMusicJamPlaylistWithQueryJson(query string) ([]TrackInfo, error) {
 	var playlist []TrackInfo
 	ytdlpCommand := ytdlp.New()
 
@@ -117,24 +117,24 @@ func GetMusicJamPlaylistWithQuery(query string) ([]TrackInfo, error) {
 	ytdlpCommand = ytdlpCommand.
 		NoWarnings().
 		Quiet().
-		MatchFilters("duration > 120 & duration < 540").
-		Print("%(webpage_url)s<<>>%(uploader)s<<>>%(title)s<<>>%(duration)s")
+		FlatPlaylist().
+		DumpJSON()
 
 	out, err := ytdlpCommand.Run(context.TODO(), "ytsearch20:"+query+" topic ") //20 results
 	if err != nil {
 		return nil, err
 	}
 
-	for line := range strings.SplitSeq(strings.TrimSpace(out.Stdout), "\n") {
-		urls, title, duration, err := extractInfoFromResult(ytdlp.Result{Stdout: line})
-		if err != nil {
-			continue
-		}
+	entries, err := YTVideoInfoParser(*out)
+	if err != nil {
+		return nil, err
+	}
 
+	for _, data := range entries {
 		playlist = append(playlist, TrackInfo{
-			Trackname:  title,
-			YTVideoURL: urls,
-			Duration:   duration,
+			Trackname:  data.Author + " - " + data.Name,
+			YTVideoURL: data.URL,
+			Duration:   time.Duration(data.Duration * float64(time.Second)),
 		})
 	}
 

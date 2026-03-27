@@ -12,7 +12,7 @@ func (y YTRadioSource) Name() string { return "YouTubeRadio" }
 func (y YTRadioSource) Search(query string) ([]library.Track, error) {
 	var tracks []library.Track
 
-	trackInfo, err := yt_dlp.GetMusicJamPlaylistWithQuery(query)
+	trackInfo, err := yt_dlp.GetMusicJamPlaylistWithQueryJson(query)
 	if err != nil {
 		return nil, err
 	}
