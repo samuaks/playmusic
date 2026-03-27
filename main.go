@@ -17,14 +17,6 @@ import (
 func main() {
 	const localMediaDir = "Media"
 
-	tracks, err := lib.LoadLibrary(localMediaDir)
-	if err != nil {
-		if !os.IsNotExist(err) {
-			fmt.Printf("Warning: failed to load local library: %v\n", err)
-		}
-		tracks = nil
-	}
-
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -39,6 +31,7 @@ func main() {
 		}
 
 		searcher := search.New(search.YTRadioSource{})
+		var tracks []lib.Track
 
 		newOnlineModel := tui.NewOnlineModel(tracks, searcher)
 
@@ -47,6 +40,14 @@ func main() {
 			tea.WithAltScreen(),
 		)
 	} else {
+		tracks, err := lib.LoadLibrary(localMediaDir)
+		if err != nil {
+			if !os.IsNotExist(err) {
+				fmt.Printf("Warning: failed to load local library: %v\n", err)
+			}
+			tracks = nil
+		}
+
 		scanCh := make(chan lib.ScanEvent)
 		go lib.ScanForMedia(ctx, lib.BackgroundLibraryDirs(), scanCh)
 		ui = tea.NewProgram(

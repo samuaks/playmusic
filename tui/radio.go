@@ -126,6 +126,7 @@ func (m *OnlineModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.searching = false
 		m.tracks = msg.tracks
 		m.current = 0
+		m.elapsed = 0
 
 		if len(m.tracks) > 0 {
 			m.result = &m.tracks[0]
