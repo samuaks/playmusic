@@ -69,6 +69,10 @@ func DefaultLibraryDirs() []string {
 		filepath.Clean(mediaLibraryDir),
 	}
 
+	if userMediaDir, err := paths.UserMediaDir(); err == nil && strings.TrimSpace(userMediaDir) != "" {
+		dirs = append(dirs, userMediaDir)
+	}
+
 	home, err := os.UserHomeDir()
 	if err == nil && strings.TrimSpace(home) != "" {
 		dirs = append(dirs, filepath.Join(home, "Music"))

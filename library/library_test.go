@@ -3,6 +3,7 @@ package library
 import (
 	"os"
 	"path/filepath"
+	"playmusic/paths"
 	"testing"
 	"time"
 )
@@ -213,6 +214,48 @@ func TestBackgroundLibraryDirsAreSubsetOfDefaultDirs(t *testing.T) {
 		if _, ok := defaultSet[cleaned]; !ok {
 			t.Fatalf("background dir %q must be part of DefaultLibraryDirs()", dir)
 		}
+	}
+}
+
+func TestDefaultLibraryDirsIncludesUserMediaDir(t *testing.T) {
+	dirs := DefaultLibraryDirs()
+
+	userMediaDir, err := paths.UserMediaDir()
+	if err != nil {
+		t.Fatalf("expected user media dir to resolve: %v", err)
+	}
+
+	found := false
+	for _, dir := range dirs {
+		if filepath.Clean(dir) == filepath.Clean(userMediaDir) {
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		t.Fatalf("expected default library dirs to include %q, got %#v", userMediaDir, dirs)
+	}
+}
+
+func TestBackgroundLibraryDirsIncludesUserMediaDir(t *testing.T) {
+	dirs := BackgroundLibraryDirs()
+
+	userMediaDir, err := paths.UserMediaDir()
+	if err != nil {
+		t.Fatalf("expected user media dir to resolve: %v", err)
+	}
+
+	found := false
+	for _, dir := range dirs {
+		if filepath.Clean(dir) == filepath.Clean(userMediaDir) {
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		t.Fatalf("expected background library dirs to include %q, got %#v", userMediaDir, dirs)
 	}
 }
 
