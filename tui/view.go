@@ -39,24 +39,28 @@ func (m Model) playerBarView() string {
 
 func (m Model) searchBarView() string {
 	title := titleStyle.Padding(0, 2).Render(TITLE)
+	var hint string
 	var query string
 
 	switch m.focus {
 	case focusList:
 		query = dimmedStyle.Render(SEARCHBAR_LIST_PLACEHOLDER)
 	case focusSearch:
-		base := "> " + m.searchQuery
-		line := fmt.Sprintf("%s  %s", base, SEARCHBAR_SEARCH_HINT)
+		hint = lipgloss.NewStyle().Padding(0, 2).Render(dimmedStyle.Render(SEARCHBAR_SEARCH_HINT))
+		base := dimmedStyle.Render("> " + m.searchQuery)
 		if m.searching {
-			query = m.spinner.View() + " " + dimmedStyle.Render(line)
+			query = m.spinner.View() + " " + base
 		} else {
-			query = dimmedStyle.Render(line)
+			query = base
 		}
 	default:
 		query = dimmedStyle.Render(SEARCHBAR_LIST_PLACEHOLDER)
 	}
 
 	input := lipgloss.NewStyle().Padding(0, 2).Render(query)
+	if hint != "" {
+		return fmt.Sprintf("%s\n%s\n%s\n", title, hint, input)
+	}
 	return fmt.Sprintf("%s\n%s\n", title, input)
 }
 

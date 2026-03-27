@@ -809,6 +809,9 @@ func TestSearchBarViewShowsListPlaceholderInListFocus(t *testing.T) {
 	if strings.Contains(view, "> beatles") {
 		t.Fatalf("did not expect query prompt in list focus, got %q", view)
 	}
+	if strings.Contains(view, "Type to filter | Enter search | Esc clear & exit") {
+		t.Fatalf("did not expect search-focus hint in list focus, got %q", view)
+	}
 }
 
 func TestSearchBarViewShowsPromptAndQueryInSearchFocus(t *testing.T) {
@@ -827,6 +830,9 @@ func TestSearchBarViewShowsPromptAndQueryInSearchFocus(t *testing.T) {
 	}
 	if !strings.Contains(view, "Type to filter | Enter search | Esc clear & exit") {
 		t.Fatalf("expected search-focus hint in top bar, got %q", view)
+	}
+	if strings.Contains(view, "> beatles  Type to filter | Enter search | Esc clear & exit") {
+		t.Fatalf("expected hint and query on separate lines, got %q", view)
 	}
 }
 
