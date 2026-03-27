@@ -167,6 +167,39 @@ func TestLoadLibraryKeepsSameSizeFilesWithDifferentNames(t *testing.T) {
 	}
 }
 
+func TestLoadLibraryKeepsLargeSameSizeFilesWhenMiddleDiffers(t *testing.T) {
+	dir := t.TempDir()
+
+	base := make([]byte, 220*1024)
+	for i := range base {
+		base[i] = 'A'
+	}
+
+	middleA := make([]byte, len(base))
+	copy(middleA, base)
+	middleB := make([]byte, len(base))
+	copy(middleB, base)
+
+	mid := len(base) / 2
+	copy(middleA[mid-8:mid+8], []byte("AAAAAAAABBBBBBBB"))
+	copy(middleB[mid-8:mid+8], []byte("CCCCCCCCDDDDDDDD"))
+
+	if err := os.WriteFile(filepath.Join(dir, "songA.mp3"), middleA, 0644); err != nil {
+		t.Fatalf("failed to write songA: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "songB.mp3"), middleB, 0644); err != nil {
+		t.Fatalf("failed to write songB: %v", err)
+	}
+
+	tracks, err := LoadLibrary(dir)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(tracks) != 2 {
+		t.Fatalf("expected 2 tracks because middle content differs, got %d", len(tracks))
+	}
+}
+
 func TestLoadLibraryRecursive(t *testing.T) {
 	root := t.TempDir()
 	nested := filepath.Join(root, "nested", "deeper")
