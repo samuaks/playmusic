@@ -44,3 +44,7 @@ type searchDoneMsg struct{}
 type searchResultsMsg struct {
 	tracks []library.Track
 }
+
+type trackDownloadedMsg struct{}
+
+type clearNotificationMsg struct{}

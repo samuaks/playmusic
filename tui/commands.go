@@ -14,6 +14,12 @@ func debounceSearch(query string) tea.Cmd {
 	})
 }
 
+func clearNotificationAfter(d time.Duration) tea.Cmd {
+	return tea.Tick(d, func(t time.Time) tea.Msg {
+		return clearNotificationMsg{}
+	})
+}
+
 // waitForLibraryEvent blocks until the next background-scanned track arrives.
 // if the scan channel is closed, it emits a completion message instead
 func waitForLibraryEvent(ch <-chan library.ScanEvent) tea.Cmd {

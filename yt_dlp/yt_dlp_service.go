@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"playmusic/helpers"
 	"strings"
 	"time"
@@ -115,9 +117,10 @@ func GetMusicJamPlaylistWithQuery(query string) ([]TrackInfo, error) {
 	ytdlpCommand = ytdlpCommand.
 		NoWarnings().
 		Quiet().
+		MatchFilters("duration > 120 & duration < 600").
 		Print("%(webpage_url)s<<>>%(uploader)s<<>>%(title)s<<>>%(duration)s")
 
-	out, err := ytdlpCommand.Run(context.TODO(), "ytsearch20:"+query+" topic") //20 results
+	out, err := ytdlpCommand.Run(context.TODO(), "ytsearch20:"+query+" topic ") //20 results
 	if err != nil {
 		return nil, err
 	}
@@ -136,6 +139,30 @@ func GetMusicJamPlaylistWithQuery(query string) ([]TrackInfo, error) {
 	}
 
 	return playlist, nil
+}
+
+func DownloadAudio(ytVideoURL string) error {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return err
+	}
+
+	outputPath := filepath.Join(home, "Media", "%(title)s.%(ext)s")
+
+	ytdlpCmd := ytdlp.New()
+
+	if jsAvailable {
+		ytdlpCmd = ytdlpCmd.JsRuntimes("node")
+	}
+
+	ytdlpCmd = ytdlpCmd.
+		Format("bestaudio").
+		ExtractAudio().
+		AudioFormat("mp3").
+		Output(outputPath)
+
+	_, err = ytdlpCmd.Run(context.TODO(), ytVideoURL)
+	return err
 }
 
 func extractInfoFromResult(queryRes ytdlp.Result) (string, string, time.Duration, error) {

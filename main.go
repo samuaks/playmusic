@@ -37,9 +37,13 @@ func main() {
 		} else {
 			yt_dlp.SetBinaryPath(resInst.Executable)
 		}
+
 		searcher := search.New(search.YTRadioSource{})
+
+		newOnlineModel := tui.NewOnlineModel(tracks, searcher)
+
 		ui = tea.NewProgram(
-			tui.NewOnlineModel(tracks, searcher),
+			&newOnlineModel,
 			tea.WithAltScreen(),
 		)
 	} else {

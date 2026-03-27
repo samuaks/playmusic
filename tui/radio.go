@@ -5,6 +5,7 @@ import (
 	"playmusic/library"
 	"playmusic/player"
 	"playmusic/search"
+	"playmusic/yt_dlp"
 	"strings"
 	"time"
 	"unicode"
@@ -17,18 +18,19 @@ import (
 )
 
 type OnlineModel struct {
-	tracks      []library.Track
-	current     int
-	elapsed     time.Duration
-	paused      bool
-	searcher    *search.Searcher
-	player      *player.Player
-	searchQuery string
-	searching   bool
-	result      *library.Track
-	spinner     spinner.Model
-	width       int
-	height      int
+	tracks          []library.Track
+	current         int
+	elapsed         time.Duration
+	paused          bool
+	searcher        *search.Searcher
+	player          *player.Player
+	searchQuery     string
+	searching       bool
+	result          *library.Track
+	spinner         spinner.Model
+	width           int
+	height          int
+	trackDownloaded bool
 }
 
 func NewOnlineModel(tracks []library.Track, searcher *search.Searcher) OnlineModel {
@@ -47,7 +49,7 @@ func (m OnlineModel) Init() tea.Cmd {
 	return tick()
 }
 
-func (m OnlineModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m *OnlineModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
@@ -69,7 +71,6 @@ func (m OnlineModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "enter":
 			if m.result != nil {
 				m.player.Stop()
-				// playback handled separately
 			}
 			return m, debounceSearch(m.searchQuery)
 		case "ctrl+p":
@@ -87,6 +88,8 @@ func (m OnlineModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "ctrl+b":
 			m.player.Prev()
 			return m, nil
+		case "ctrl+d":
+			return m, m.downloadTrack()
 		default:
 			if len(msg.String()) == 1 {
 				r := rune(msg.String()[0])
@@ -171,12 +174,20 @@ func (m OnlineModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, tick()
 
+	case trackDownloadedMsg:
+		m.trackDownloaded = true
+		return m, clearNotificationAfter(3 * time.Second)
+
+	case clearNotificationMsg:
+		m.trackDownloaded = false
+		return m, nil
+
 	}
 
 	return m, nil
 }
 
-func (m OnlineModel) runOnlineSearch(query string) tea.Cmd {
+func (m *OnlineModel) runOnlineSearch(query string) tea.Cmd {
 	return func() tea.Msg {
 		tracks, err := m.searcher.Search(query)
 		if err != nil || len(tracks) == 0 {
@@ -186,10 +197,17 @@ func (m OnlineModel) runOnlineSearch(query string) tea.Cmd {
 	}
 }
 
-func (m OnlineModel) View() string {
+func (m *OnlineModel) downloadTrack() tea.Cmd {
+	return func() tea.Msg {
+		_ = yt_dlp.DownloadAudio(m.tracks[m.current].YTVideoURL)
+		return trackDownloadedMsg{}
+	}
+}
+
+func (m *OnlineModel) View() string {
 	var sb strings.Builder
 
-	sb.WriteString(titleStyle.Padding(0, 2).Render("Music Player — Online") + "\n")
+	sb.WriteString(titleStyle.Padding(0, 2).Render("Music Player — Online Radio") + "\n")
 
 	query := "> " + m.searchQuery
 	if m.searchQuery == "" {
@@ -200,6 +218,9 @@ func (m OnlineModel) View() string {
 	}
 	sb.WriteString(lipgloss.NewStyle().Padding(0, 2).Render(query) + "\n\n")
 
+	if m.trackDownloaded {
+		sb.WriteString(dimmedStyle.Padding(0, 2).Render("Track downloaded") + "\n")
+	}
 	_, elapsedStr := m.radioTrackProgress()
 
 	if m.result != nil {
