@@ -5,11 +5,12 @@ import (
 	"os"
 	"path/filepath"
 	. "playmusic/helpers"
+	"playmusic/paths"
 	"strings"
 	"time"
 )
 
-const mediaLibraryDir = "Media"
+const mediaLibraryDir = paths.MediaLibraryDir
 
 type Track struct {
 	Trackname  string
