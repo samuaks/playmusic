@@ -525,3 +525,77 @@ func TestModelUpdateLeavesSearchFocusOnEsc(t *testing.T) {
 		t.Fatalf("expected nil cmd on esc focus switch, got %v", cmd)
 	}
 }
+
+func TestModelUpdateEnterInListFocusStartsPlayback(t *testing.T) {
+	model := NewModel([]library.Track{
+		{
+			Trackname: "Local Track",
+			Path:      "/music/local.mp3",
+			Filename:  "local.mp3",
+		},
+	}, search.New(search.MockSource{}), nil)
+	model.focus = focusList
+
+	updatedModel, cmd := model.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	got := updatedModel.(Model)
+
+	if cmd == nil {
+		t.Fatal("expected playback cmd on enter in list focus")
+	}
+	if got.current != 0 {
+		t.Fatalf("expected current index 0 after enter in list focus, got %d", got.current)
+	}
+	if got.searching {
+		t.Fatal("did not expect searching state when pressing enter in list focus")
+	}
+}
+
+func TestModelUpdateEnterInSearchFocusRunsSearch(t *testing.T) {
+	model := NewModel([]library.Track{
+		{
+			Trackname: "Local Track",
+			Path:      "/music/local.mp3",
+			Filename:  "local.mp3",
+		},
+	}, search.New(search.MockSource{}), nil)
+	model.focus = focusSearch
+	model.searchQuery = "beatles"
+
+	updatedModel, cmd := model.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	got := updatedModel.(Model)
+
+	if cmd == nil {
+		t.Fatal("expected search cmd on enter in search focus with non-empty query")
+	}
+	if !got.searching {
+		t.Fatal("expected searching state to be enabled on enter in search focus")
+	}
+	if got.current != -1 {
+		t.Fatalf("did not expect playback selection change in search focus, got current=%d", got.current)
+	}
+}
+
+func TestModelUpdateEnterInSearchFocusWithEmptyQueryDoesNothing(t *testing.T) {
+	model := NewModel([]library.Track{
+		{
+			Trackname: "Local Track",
+			Path:      "/music/local.mp3",
+			Filename:  "local.mp3",
+		},
+	}, search.New(search.MockSource{}), nil)
+	model.focus = focusSearch
+	model.searchQuery = ""
+
+	updatedModel, cmd := model.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	got := updatedModel.(Model)
+
+	if cmd != nil {
+		t.Fatalf("expected nil cmd on enter in search focus with empty query, got %v", cmd)
+	}
+	if got.searching {
+		t.Fatal("expected searching state to remain false with empty query")
+	}
+	if got.current != -1 {
+		t.Fatalf("did not expect playback selection change, got current=%d", got.current)
+	}
+}
