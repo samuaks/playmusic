@@ -497,3 +497,51 @@ func TestScanForMediaWithSeedSkipsDuplicateFromPreviouslyLoadedTrack(t *testing.
 		t.Fatalf("expected unique.mp3 to remain after seeded dedup, got %+v", discovered[0].Track)
 	}
 }
+
+func TestScanForMediaWithSeedSkipsDuplicateContentWithDifferentName(t *testing.T) {
+	root := t.TempDir()
+	mediaDir := filepath.Join(root, "Media")
+	musicDir := filepath.Join(root, "Music")
+
+	if err := os.MkdirAll(mediaDir, 0755); err != nil {
+		t.Fatalf("failed to create mediaDir: %v", err)
+	}
+	if err := os.MkdirAll(musicDir, 0755); err != nil {
+		t.Fatalf("failed to create musicDir: %v", err)
+	}
+
+	content := []byte("same-content")
+	seedPath := filepath.Join(mediaDir, "song.mp3")
+	dupPath := filepath.Join(musicDir, "song (1).mp3")
+
+	if err := os.WriteFile(seedPath, content, 0644); err != nil {
+		t.Fatalf("failed to write seed track: %v", err)
+	}
+	if err := os.WriteFile(dupPath, content, 0644); err != nil {
+		t.Fatalf("failed to write duplicate track: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(musicDir, "unique.mp3"), []byte("unique"), 0644); err != nil {
+		t.Fatalf("failed to write unique track: %v", err)
+	}
+
+	ch := make(chan ScanEvent)
+	go ScanForMediaWithSeed(context.Background(), []string{musicDir}, []Track{BuildDiscoveredTrack(seedPath)}, ch)
+
+	var events []ScanEvent
+	for evt := range ch {
+		events = append(events, evt)
+	}
+
+	discovered := trackEventsByType(events, ScanEventDiscovered)
+	enriched := trackEventsByType(events, ScanEventEnriched)
+
+	if len(discovered) != 1 {
+		t.Fatalf("expected only the unique discovered event after seeded content dedup, got %d", len(discovered))
+	}
+	if len(enriched) != 1 {
+		t.Fatalf("expected only the unique enriched event after seeded content dedup, got %d", len(enriched))
+	}
+	if discovered[0].Track == nil || discovered[0].Track.Filename != "unique.mp3" {
+		t.Fatalf("expected unique.mp3 to remain after seeded content dedup, got %+v", discovered[0].Track)
+	}
+}
