@@ -80,6 +80,35 @@ func TestLoadLibraryProcessesDistinctFilesWithSameName(t *testing.T) {
 	}
 }
 
+func TestLoadLibraryDeduplicatesSameContentWithDifferentNames(t *testing.T) {
+	root := t.TempDir()
+	dir1 := filepath.Join(root, "one")
+	dir2 := filepath.Join(root, "two")
+
+	if err := os.MkdirAll(dir1, 0755); err != nil {
+		t.Fatalf("failed to create dir1: %v", err)
+	}
+	if err := os.MkdirAll(dir2, 0755); err != nil {
+		t.Fatalf("failed to create dir2: %v", err)
+	}
+
+	content := []byte("same-audio-content")
+	if err := os.WriteFile(filepath.Join(dir1, "song.mp3"), content, 0644); err != nil {
+		t.Fatalf("failed to write dir1 track: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir2, "song (1).mp3"), content, 0644); err != nil {
+		t.Fatalf("failed to write dir2 track: %v", err)
+	}
+
+	tracks, err := LoadLibraries(dir1, dir2)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(tracks) != 1 {
+		t.Fatalf("expected 1 unique track for same content with different names, got %d", len(tracks))
+	}
+}
+
 func TestLoadTracksEmptyDir(t *testing.T) {
 	dir := t.TempDir()
 	tracks, err := LoadLibrary(dir)
@@ -119,11 +148,10 @@ func TestFormattedDuration(t *testing.T) {
 func TestLoadLibraryKeepsSameSizeFilesWithDifferentNames(t *testing.T) {
 	dir := t.TempDir()
 
-	content := []byte("testing content")
-	if err := os.WriteFile(filepath.Join(dir, "song1.mp3"), content, 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "song1.mp3"), []byte("abc123"), 0644); err != nil {
 		t.Fatalf("failed to write song1: %v", err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, "song2.mp3"), content, 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "song2.mp3"), []byte("xyz789"), 0644); err != nil {
 		t.Fatalf("failed to write song2: %v", err)
 	}
 	if err := os.WriteFile(filepath.Join(dir, "song3.mp3"), []byte("different content"), 0644); err != nil {

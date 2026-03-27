@@ -37,7 +37,7 @@ func ScanForMedia(ctx context.Context, dirs []string, out chan<- ScanEvent) {
 // reusing deduplication state from tracks that were already loaded earlier.
 func ScanForMediaWithSeed(ctx context.Context, dirs []string, seedTracks []Track, out chan<- ScanEvent) {
 	defer close(out)
-	state := newScanState(make(map[string]struct{}), make(map[string]struct{}))
+	state := newScanState(make(map[string]struct{}), make(map[string]struct{}), make(map[string]struct{}))
 	for _, track := range seedTracks {
 		state.rememberTrack(track)
 	}
