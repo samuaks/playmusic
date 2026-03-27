@@ -624,6 +624,43 @@ func TestModelUpdateTypingInSearchFocusFiltersListLive(t *testing.T) {
 	}
 }
 
+func TestModelUpdateTypingQOrQuestionInSearchFocusUpdatesQueryAndFilter(t *testing.T) {
+	model := NewModel([]library.Track{
+		{Trackname: "Queen - Bohemian Rhapsody", Path: "/music/queen.mp3", Filename: "queen.mp3"},
+		{Trackname: "Metallica - One", Path: "/music/metallica.mp3", Filename: "metallica.mp3"},
+	}, search.New(search.MockSource{}), nil)
+	model.focus = focusSearch
+
+	updatedModel, cmd := model.Update(tea.KeyMsg{
+		Type:  tea.KeyRunes,
+		Runes: []rune("q"),
+	})
+	got := updatedModel.(Model)
+
+	if cmd != nil {
+		t.Fatalf("expected nil cmd when typing q in search focus, got %v", cmd)
+	}
+	if got.searchQuery != "q" {
+		t.Fatalf("expected searchQuery to be %q after typing q, got %q", "q", got.searchQuery)
+	}
+	if len(got.list.Items()) != 1 {
+		t.Fatalf("expected filtered list to contain 1 item after typing q, got %d", len(got.list.Items()))
+	}
+
+	updatedModel, cmd = got.Update(tea.KeyMsg{
+		Type:  tea.KeyRunes,
+		Runes: []rune("?"),
+	})
+	got = updatedModel.(Model)
+
+	if cmd != nil {
+		t.Fatalf("expected nil cmd when typing ? in search focus, got %v", cmd)
+	}
+	if got.searchQuery != "q?" {
+		t.Fatalf("expected searchQuery to be %q after typing ?, got %q", "q?", got.searchQuery)
+	}
+}
+
 func TestModelUpdateTypingInListFocusDoesNotChangeQueryOrFilter(t *testing.T) {
 	model := NewModel([]library.Track{
 		{Trackname: "Alpha", Path: "/music/alpha.mp3", Filename: "alpha.mp3"},

@@ -61,6 +61,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.focus = focusSearch
 				return m, nil
 			}
+			if m.focus == focusSearch {
+				m.searchQuery += msg.String()
+				m.updateListItems()
+				return m, nil
+			}
 		case "esc":
 			if m.focus == focusSearch {
 				m.focus = focusList
