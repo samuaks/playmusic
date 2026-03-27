@@ -46,10 +46,11 @@ func (m Model) searchBarView() string {
 		query = dimmedStyle.Render(SEARCHBAR_LIST_PLACEHOLDER)
 	case focusSearch:
 		base := "> " + m.searchQuery
+		line := fmt.Sprintf("%s  %s", base, SEARCHBAR_SEARCH_HINT)
 		if m.searching {
-			query = m.spinner.View() + " " + dimmedStyle.Render(base)
+			query = m.spinner.View() + " " + dimmedStyle.Render(line)
 		} else {
-			query = dimmedStyle.Render(base)
+			query = dimmedStyle.Render(line)
 		}
 	default:
 		query = dimmedStyle.Render(SEARCHBAR_LIST_PLACEHOLDER)
@@ -78,5 +79,5 @@ func (m Model) libraryScanStatusView() string {
 }
 
 func (m Model) helpView() string {
-	return dimmedStyle.Render(HELP_TEXT)
+	return dimmedStyle.Render(GLOBAL_HELP_TEXT)
 }
