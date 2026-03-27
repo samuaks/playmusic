@@ -197,6 +197,53 @@ func TestModelUpdateTracksAddedFromBackgroundScan(t *testing.T) {
 	}
 }
 
+func TestModelUpdateKeepsTracksSortedWhenBackgroundTrackAdded(t *testing.T) {
+	model := NewModel([]library.Track{
+		{Trackname: "Bravo", Path: "/music/bravo.mp3", Filename: "bravo.mp3"},
+		{Trackname: "Delta", Path: "/music/delta.mp3", Filename: "delta.mp3"},
+	}, make(chan library.ScanEvent))
+
+	updatedModel, _ := model.Update(libraryTrackFoundMsg{
+		track: library.Track{
+			Trackname: "Alpha",
+			Path:      "/music/alpha.mp3",
+			Filename:  "alpha.mp3",
+		},
+	})
+
+	got := updatedModel.(Model)
+	if len(got.tracks) != 3 {
+		t.Fatalf("expected 3 tracks after background add, got %d", len(got.tracks))
+	}
+	if got.tracks[0].Trackname != "Alpha" || got.tracks[1].Trackname != "Bravo" || got.tracks[2].Trackname != "Delta" {
+		t.Fatalf("expected tracks to remain sorted, got %q, %q, %q", got.tracks[0].Trackname, got.tracks[1].Trackname, got.tracks[2].Trackname)
+	}
+}
+
+func TestModelUpdateKeepsCurrentTrackAfterResort(t *testing.T) {
+	model := NewModel([]library.Track{
+		{Trackname: "Bravo", Path: "/music/bravo.mp3", Filename: "bravo.mp3"},
+		{Trackname: "Delta", Path: "/music/delta.mp3", Filename: "delta.mp3"},
+	}, make(chan library.ScanEvent))
+	model.current = 1
+
+	updatedModel, _ := model.Update(libraryTrackFoundMsg{
+		track: library.Track{
+			Trackname: "Alpha",
+			Path:      "/music/alpha.mp3",
+			Filename:  "alpha.mp3",
+		},
+	})
+
+	got := updatedModel.(Model)
+	if got.current != 2 {
+		t.Fatalf("expected current track index to follow Delta after resort, got %d", got.current)
+	}
+	if got.tracks[got.current].Trackname != "Delta" {
+		t.Fatalf("expected current track to remain Delta, got %q", got.tracks[got.current].Trackname)
+	}
+}
+
 func TestLibraryScanStatusViewShowsActiveState(t *testing.T) {
 	model := NewModel(nil, make(chan library.ScanEvent))
 	model.scanning = true
