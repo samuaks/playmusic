@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/rand"
 	. "playmusic/library"
+	"sort"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/list"
@@ -42,6 +43,29 @@ func (m *Model) updateListItems() {
 	} else {
 		m.list.SetDelegate(newDelegate("", m.searchQuery))
 	}
+}
+
+func (m *Model) sortTracks() {
+	currentID := ""
+	if m.current >= 0 && m.current < len(m.tracks) {
+		currentID = m.tracks[m.current].Identifier()
+	}
+
+	sort.SliceStable(m.tracks, func(i, j int) bool {
+		return m.tracks[i].Trackname < m.tracks[j].Trackname
+	})
+
+	if currentID == "" {
+		return
+	}
+
+	for i, t := range m.tracks {
+		if t.Identifier() == currentID {
+			m.current = i
+			return
+		}
+	}
+	m.current = -1
 }
 
 func highlightMatch(trackName, query string) string {

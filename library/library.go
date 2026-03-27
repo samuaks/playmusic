@@ -36,19 +36,20 @@ func (t Track) Identifier() string {
 }
 
 func LoadLibrary(dir string) ([]Track, error) {
-	return loadFromDir(dir, make(map[string]struct{}), make(map[string]struct{}))
+	return loadFromDir(dir, make(map[string]struct{}), make(map[string]struct{}), make(map[string]struct{}))
 }
 
 func LoadLibraries(dirs ...string) ([]Track, error) {
 	var tracks []Track
 	seenPaths := make(map[string]struct{})
 	seenSignatures := make(map[string]struct{})
+	seenContents := make(map[string]struct{})
 
 	for _, dir := range dirs {
 		if strings.TrimSpace(dir) == "" {
 			continue
 		}
-		scanned, err := loadFromDir(dir, seenPaths, seenSignatures)
+		scanned, err := loadFromDir(dir, seenPaths, seenSignatures, seenContents)
 		if err != nil {
 			if os.IsNotExist(err) {
 				continue
@@ -97,9 +98,9 @@ func LoadDefaultLibrary() ([]Track, error) {
 	return LoadLibraries(DefaultLibraryDirs()...)
 }
 
-func loadFromDir(dir string, seenPaths, seenSignatures map[string]struct{}) ([]Track, error) {
+func loadFromDir(dir string, seenPaths, seenSignatures, seenContents map[string]struct{}) ([]Track, error) {
 	var tracks []Track
-	state := newScanState(seenPaths, seenSignatures)
+	state := newScanState(seenPaths, seenSignatures, seenContents)
 
 	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
