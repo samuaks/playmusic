@@ -65,16 +65,3 @@ func (m Model) playCurrent() tea.Cmd {
 		return nil
 	}
 }
-
-func (m Model) runSearch(query string, reqID int) tea.Cmd {
-	return func() tea.Msg {
-		tracks, err := m.searcher.Search(query)
-		if err != nil || len(tracks) == 0 {
-			return searchDoneMsg{reqID: reqID}
-		}
-		for _, t := range tracks {
-			return searchTrackFoundMsg{track: t, reqID: reqID}
-		}
-		return searchDoneMsg{reqID: reqID}
-	}
-}
