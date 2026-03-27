@@ -669,3 +669,80 @@ func TestModelUpdateBackspaceInSearchFocusUpdatesQueryAndFilter(t *testing.T) {
 		t.Fatalf("expected filtered list to contain 1 item after backspace, got %d", len(got.list.Items()))
 	}
 }
+
+func TestModelUpdateIgnoresStaleSearchTrackFoundMsg(t *testing.T) {
+	model := NewModel([]library.Track{
+		{Trackname: "Local", Path: "/music/local.mp3", Filename: "local.mp3"},
+	}, search.New(search.MockSource{}), nil)
+	model.searching = true
+	model.searchRequestID = 2
+
+	updatedModel, cmd := model.Update(searchTrackFoundMsg{
+		track: library.Track{Trackname: "Stale", Path: "/music/stale.mp3", Filename: "stale.mp3"},
+		reqID: 1,
+	})
+	got := updatedModel.(Model)
+
+	if cmd != nil {
+		t.Fatalf("expected nil cmd for stale searchTrackFoundMsg, got %v", cmd)
+	}
+	if len(got.tracks) != 1 {
+		t.Fatalf("expected stale result to be ignored, got %d tracks", len(got.tracks))
+	}
+	if !got.searching {
+		t.Fatal("expected searching to remain true while current request is still active")
+	}
+}
+
+func TestModelUpdateAppliesCurrentSearchTrackFoundMsg(t *testing.T) {
+	model := NewModel([]library.Track{
+		{Trackname: "Local", Path: "/music/local.mp3", Filename: "local.mp3"},
+	}, search.New(search.MockSource{}), nil)
+	model.searching = true
+	model.searchRequestID = 2
+
+	updatedModel, _ := model.Update(searchTrackFoundMsg{
+		track: library.Track{Trackname: "Fresh", Path: "/music/fresh.mp3", Filename: "fresh.mp3"},
+		reqID: 2,
+	})
+	got := updatedModel.(Model)
+
+	if len(got.tracks) != 2 {
+		t.Fatalf("expected current result to be appended, got %d tracks", len(got.tracks))
+	}
+	if got.searching {
+		t.Fatal("expected searching to be disabled after current search result is applied")
+	}
+}
+
+func TestModelUpdateIgnoresStaleSearchDoneMsg(t *testing.T) {
+	model := NewModel(nil, search.New(search.MockSource{}), nil)
+	model.searching = true
+	model.searchRequestID = 3
+
+	updatedModel, cmd := model.Update(searchDoneMsg{reqID: 2})
+	got := updatedModel.(Model)
+
+	if cmd != nil {
+		t.Fatalf("expected nil cmd for stale searchDoneMsg, got %v", cmd)
+	}
+	if !got.searching {
+		t.Fatal("expected searching to remain true for stale done message")
+	}
+}
+
+func TestModelUpdateAppliesCurrentSearchDoneMsg(t *testing.T) {
+	model := NewModel(nil, search.New(search.MockSource{}), nil)
+	model.searching = true
+	model.searchRequestID = 3
+
+	updatedModel, cmd := model.Update(searchDoneMsg{reqID: 3})
+	got := updatedModel.(Model)
+
+	if cmd != nil {
+		t.Fatalf("expected nil cmd for current searchDoneMsg, got %v", cmd)
+	}
+	if got.searching {
+		t.Fatal("expected searching to be disabled for current done message")
+	}
+}
