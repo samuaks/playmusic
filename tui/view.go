@@ -41,15 +41,20 @@ func (m Model) searchBarView() string {
 	title := titleStyle.Padding(0, 2).Render(TITLE)
 	var query string
 
-	switch {
-	case m.searching:
-		query = m.spinner.View() + " " + dimmedStyle.Render(m.searchQuery)
-
-	case m.searchQuery == "":
-		query = dimmedStyle.Render("> " + SEARCHBAR_TEXT)
+	switch m.focus {
+	case focusList:
+		query = dimmedStyle.Render(SEARCHBAR_LIST_PLACEHOLDER)
+	case focusSearch:
+		base := "> " + m.searchQuery
+		if m.searching {
+			query = m.spinner.View() + " " + dimmedStyle.Render(base)
+		} else {
+			query = dimmedStyle.Render(base)
+		}
 	default:
-		query = dimmedStyle.Render("> ") + dimmedStyle.Render(m.searchQuery)
+		query = dimmedStyle.Render(SEARCHBAR_LIST_PLACEHOLDER)
 	}
+
 	input := lipgloss.NewStyle().Padding(0, 2).Render(query)
 	return fmt.Sprintf("%s\n%s\n", title, input)
 }
