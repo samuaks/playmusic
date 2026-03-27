@@ -85,7 +85,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		case "enter":
 			if m.focus == focusSearch {
-				if strings.TrimSpace(m.searchQuery) == "" {
+				query := strings.TrimSpace(m.searchQuery)
+				m.focus = focusList
+				m.searchQuery = ""
+				m.updateListItems()
+
+				if query == "" {
 					return m, nil
 				}
 
@@ -93,7 +98,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				reqID := m.searchRequestID
 				m.searching = true
 				m.list.SetSize(m.width, m.height-playerBarHeight-searchBarHeight-scanBarHeight)
-				return m, tea.Batch(m.runSearch(m.searchQuery, reqID), m.spinner.Tick)
+				return m, tea.Batch(m.runSearch(query, reqID), m.spinner.Tick)
 			}
 			if _, idx, ok := m.selectedTrack(); ok && idx != m.current {
 				m.elapsed = 0
