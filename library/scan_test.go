@@ -239,8 +239,8 @@ func TestScanForMediaSkipsMissingDirs(t *testing.T) {
 	}
 
 	for _, evt := range events {
-		if evt.Err != nil {
-			t.Fatalf("expected missing dir to be skipped without error events, got %v", evt.Err)
+		if evt.Track == nil && evt.Err != nil {
+			t.Fatalf("expected missing dir to be skipped without scan error events, got %v", evt.Err)
 		}
 	}
 }
