@@ -84,9 +84,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					return m, nil
 				}
 
+				m.searchRequestID++
+				reqID := m.searchRequestID
 				m.searching = true
 				m.list.SetSize(m.width, m.height-playerBarHeight-searchBarHeight-scanBarHeight)
-				return m, tea.Batch(m.runSearch(m.searchQuery), m.spinner.Tick)
+				return m, tea.Batch(m.runSearch(m.searchQuery, reqID), m.spinner.Tick)
 			}
 			if _, idx, ok := m.selectedTrack(); ok && idx != m.current {
 				m.elapsed = 0
@@ -132,6 +134,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, cmd
 		}
 	case searchTrackFoundMsg:
+		if msg.reqID != m.searchRequestID {
+			return m, nil
+		}
 		m.searching = false
 		m.list.SetSize(m.width, m.height-playerBarHeight-searchBarHeight-scanBarHeight)
 		for _, t := range m.tracks {
@@ -169,6 +174,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.scanDone = true
 		return m, nil
 	case searchDoneMsg:
+		if msg.reqID != m.searchRequestID {
+			return m, nil
+		}
 		m.searching = false
 		m.list.SetSize(m.width, m.height-playerBarHeight-searchBarHeight-scanBarHeight)
 	}

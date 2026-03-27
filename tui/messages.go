@@ -6,11 +6,13 @@ import (
 )
 
 type tickMsg time.Time
-type trackDoneMsg struct{}
+type trackDoneMsg struct {
+}
 
 // searchTrackFoundMsg carries a track returned by the search subsystem.
 type searchTrackFoundMsg struct {
 	track library.Track
+	reqID int
 }
 
 // libraryTrackFoundMsg delivers a track discovered by the background
@@ -33,4 +35,6 @@ type libraryScanErrorMsg struct {
 // libraryScanDoneMsg signals that the background library scan has finished.
 type libraryScanDoneMsg struct{}
 
-type searchDoneMsg struct{}
+type searchDoneMsg struct {
+	reqID int
+}

@@ -29,25 +29,26 @@ const (
 )
 
 type Model struct {
-	tracks      []library.Track
-	current     int
-	elapsed     time.Duration
-	paused      bool
-	player      *Player
-	list        list.Model
-	progress    progress.Model
-	width       int
-	height      int
-	focus       focusMode
-	searcher    *search.Searcher
-	spinner     spinner.Model
-	searching   bool
-	searchQuery string
-	scanCh      <-chan library.ScanEvent
-	scanning    bool
-	scanDone    bool
-	scanError   error
-	scanAdded   int
+	tracks          []library.Track
+	current         int
+	elapsed         time.Duration
+	paused          bool
+	player          *Player
+	list            list.Model
+	progress        progress.Model
+	width           int
+	height          int
+	focus           focusMode
+	searcher        *search.Searcher
+	spinner         spinner.Model
+	searching       bool
+	searchQuery     string
+	searchRequestID int
+	scanCh          <-chan library.ScanEvent
+	scanning        bool
+	scanDone        bool
+	scanError       error
+	scanAdded       int
 }
 
 func NewModel(tracks []library.Track, searcher *search.Searcher, scanCh <-chan library.ScanEvent) Model {
