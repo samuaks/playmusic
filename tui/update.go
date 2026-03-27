@@ -3,6 +3,7 @@ package tui
 import (
 	"fmt"
 	"playmusic/library"
+	"strings"
 	"time"
 	"unicode"
 
@@ -61,9 +62,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, nil
 			}
 		case "esc":
-			/*m.searchQuery = ""
-			m.updateListItems()
-			return m, debounceSearch("")*/
 			if m.focus == focusSearch {
 				m.focus = focusList
 				m.searchQuery = ""
@@ -81,6 +79,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return m, nil
 		case "enter":
+			if m.focus == focusSearch {
+				if strings.TrimSpace(m.searchQuery) == "" {
+					return m, nil
+				}
+
+				m.searching = true
+				m.list.SetSize(m.width, m.height-playerBarHeight-searchBarHeight-scanBarHeight)
+				return m, tea.Batch(m.runSearch(m.searchQuery), m.spinner.Tick)
+			}
 			if _, idx, ok := m.selectedTrack(); ok && idx != m.current {
 				m.elapsed = 0
 				m.paused = false
