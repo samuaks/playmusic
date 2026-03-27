@@ -575,7 +575,6 @@ func TestModelUpdateEnterInSearchFocusKeepsLocalFilterAndReturnsToList(t *testin
 	if got.searchQuery != "beatles" {
 		t.Fatalf("expected search query to be preserved on enter in search focus, got %q", got.searchQuery)
 	}
-
 	if len(got.list.Items()) != 1 {
 		t.Fatalf("expected filtered list to stay narrowed after enter, got %d items", len(got.list.Items()))
 	}
@@ -598,7 +597,6 @@ func TestModelUpdateEnterInSearchFocusWithEmptyQueryDoesNothing(t *testing.T) {
 	if cmd != nil {
 		t.Fatalf("expected nil cmd on enter in search focus with empty query, got %v", cmd)
 	}
-
 	if got.focus != focusList {
 		t.Fatalf("expected focusList after enter with empty query, got %v", got.focus)
 	}

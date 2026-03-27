@@ -32,8 +32,6 @@ func main() {
 		tracks = nil
 	}
 
-	/* 	searcher := search.New(search.YTSource{}) */
-
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 

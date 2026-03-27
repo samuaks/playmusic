@@ -37,7 +37,6 @@ type Model struct {
 	height          int
 	focus           focusMode
 	searchQuery     string
-	searchRequestID int
 	scanCh          <-chan library.ScanEvent
 	scanning        bool
 	scanDone        bool
