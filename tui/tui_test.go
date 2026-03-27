@@ -825,6 +825,9 @@ func TestSearchBarViewShowsPromptAndQueryInSearchFocus(t *testing.T) {
 	if strings.Contains(view, "Press q or ? to search") {
 		t.Fatalf("did not expect list placeholder in search focus, got %q", view)
 	}
+	if !strings.Contains(view, "Type to filter | Enter search | Esc clear & exit") {
+		t.Fatalf("expected search-focus hint in top bar, got %q", view)
+	}
 }
 
 func TestSearchBarViewShowsSpinnerWhenSearchingInSearchFocus(t *testing.T) {
@@ -846,5 +849,21 @@ func TestSearchBarViewShowsSpinnerWhenSearchingInSearchFocus(t *testing.T) {
 	}
 	if strings.Contains(withSpinner, "Press q or ? to search") {
 		t.Fatalf("did not expect list placeholder while searching, got %q", withSpinner)
+	}
+	if !strings.Contains(withSpinner, "Type to filter | Enter search | Esc clear & exit") {
+		t.Fatalf("expected search-focus hint while searching, got %q", withSpinner)
+	}
+}
+
+func TestHelpViewShowsOnlyGlobalHotkeysWithoutSearchKeys(t *testing.T) {
+	model := NewModel(nil, search.New(search.MockSource{}), nil)
+
+	view := model.helpView()
+
+	if !strings.Contains(view, "space pause/resume | enter play | up/down navigate | ctrl+q quit") {
+		t.Fatalf("expected global help text, got %q", view)
+	}
+	if strings.Contains(view, "q/? search") || strings.Contains(view, "esc") {
+		t.Fatalf("did not expect search hotkeys in bottom help, got %q", view)
 	}
 }
