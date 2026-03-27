@@ -30,8 +30,17 @@ const (
 // are sent as events with Err set and Track nil. The channel is closed when
 // scanning finishes. Missing directories are skipped.
 func ScanForMedia(ctx context.Context, dirs []string, out chan<- ScanEvent) {
+	ScanForMediaWithSeed(ctx, dirs, nil, out)
+}
+
+// ScanForMediaWithSeed scans the provided directories in the background while
+// reusing deduplication state from tracks that were already loaded earlier.
+func ScanForMediaWithSeed(ctx context.Context, dirs []string, seedTracks []Track, out chan<- ScanEvent) {
 	defer close(out)
 	state := newScanState(make(map[string]struct{}), make(map[string]struct{}))
+	for _, track := range seedTracks {
+		state.rememberTrack(track)
+	}
 
 	for _, dir := range dirs {
 		if strings.TrimSpace(dir) == "" {

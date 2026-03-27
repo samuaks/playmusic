@@ -2,6 +2,7 @@ package library
 
 import (
 	"io/fs"
+	"os"
 	"path/filepath"
 	. "playmusic/decoder"
 	"runtime"
@@ -59,4 +60,25 @@ func (s *scanState) shouldInclude(path string, d fs.DirEntry) bool {
 	}
 
 	return true
+}
+
+func (s *scanState) rememberTrack(track Track) {
+	if track.Path == "" {
+		return
+	}
+
+	pathKey := normalizedPathKey(track.Path)
+	s.seenPaths[pathKey] = struct{}{}
+
+	info, err := os.Stat(track.Path)
+	if err != nil {
+		return
+	}
+
+	name := track.Filename
+	if strings.TrimSpace(name) == "" {
+		name = filepath.Base(track.Path)
+	}
+	sigKey := strings.ToLower(name) + ":" + strconv.FormatInt(info.Size(), 10)
+	s.seenSignatures[sigKey] = struct{}{}
 }
