@@ -49,11 +49,11 @@ func (m Model) searchBarView() string {
 	case focusList:
 		hint = lipgloss.NewStyle().Padding(0, 2).Render(dimmedStyle.Render(SEARCHBAR_LIST_PLACEHOLDER))
 		if m.searchQuery != "" {
-			query = dimmedStyle.Render("> ") + currentStyle.Render(m.searchQuery)
+			query = currentStyle.Render("  " + m.searchQuery)
 		}
 	case focusSearch:
 		hint = lipgloss.NewStyle().Padding(0, 2).Render(scanStatusStyle.Render(SEARCHBAR_SEARCH_HINT))
-		base := scanStatusStyle.Render("> ") + currentStyle.Render(m.searchQuery)
+		base := currentStyle.Render("> " + m.searchQuery)
 		query = base
 	default:
 		query = dimmedStyle.Render(SEARCHBAR_LIST_PLACEHOLDER)
