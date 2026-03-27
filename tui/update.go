@@ -73,6 +73,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return m, nil
 		case " ":
+			if m.focus == focusSearch {
+				m.searchQuery += msg.String()
+				m.updateListItems()
+				return m, nil
+			}
 			if m.paused {
 				m.player.Resume()
 				m.paused = false
