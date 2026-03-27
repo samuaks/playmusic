@@ -746,3 +746,56 @@ func TestModelUpdateAppliesCurrentSearchDoneMsg(t *testing.T) {
 		t.Fatal("expected searching to be disabled for current done message")
 	}
 }
+
+func TestSearchBarViewShowsListPlaceholderInListFocus(t *testing.T) {
+	model := NewModel(nil, search.New(search.MockSource{}), nil)
+	model.focus = focusList
+	model.searchQuery = "beatles"
+
+	view := model.searchBarView()
+
+	if !strings.Contains(view, "Press q or ? to search") {
+		t.Fatalf("expected list-focus placeholder, got %q", view)
+	}
+	if strings.Contains(view, "> beatles") {
+		t.Fatalf("did not expect query prompt in list focus, got %q", view)
+	}
+}
+
+func TestSearchBarViewShowsPromptAndQueryInSearchFocus(t *testing.T) {
+	model := NewModel(nil, search.New(search.MockSource{}), nil)
+	model.focus = focusSearch
+	model.searchQuery = "beatles"
+	model.searching = false
+
+	view := model.searchBarView()
+
+	if !strings.Contains(view, "> beatles") {
+		t.Fatalf("expected search prompt with query, got %q", view)
+	}
+	if strings.Contains(view, "Press q or ? to search") {
+		t.Fatalf("did not expect list placeholder in search focus, got %q", view)
+	}
+}
+
+func TestSearchBarViewShowsSpinnerWhenSearchingInSearchFocus(t *testing.T) {
+	model := NewModel(nil, search.New(search.MockSource{}), nil)
+	model.focus = focusSearch
+	model.searchQuery = "beatles"
+
+	model.searching = false
+	withoutSpinner := model.searchBarView()
+
+	model.searching = true
+	withSpinner := model.searchBarView()
+
+	if !strings.Contains(withSpinner, "> beatles") {
+		t.Fatalf("expected query prompt while searching, got %q", withSpinner)
+	}
+	if withSpinner == withoutSpinner {
+		t.Fatalf("expected searching view to differ from non-searching view")
+	}
+	if strings.Contains(withSpinner, "Press q or ? to search") {
+		t.Fatalf("did not expect list placeholder while searching, got %q", withSpinner)
+	}
+}
