@@ -97,14 +97,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, m.playCurrent()
 			}
 		case "backspace":
-			if len(m.searchQuery) > 0 {
+			if m.focus == focusSearch && len(m.searchQuery) > 0 {
 				m.searchQuery = m.searchQuery[:len(m.searchQuery)-1]
 				m.updateListItems()
 				return m, nil
 			}
 			return m, nil
 		default:
-			if len(msg.String()) == 1 && msg.String() != " " {
+			if m.focus == focusSearch && len(msg.String()) == 1 && msg.String() != " " {
 				r := rune(msg.String()[0])
 				if unicode.IsLetter(r) || unicode.IsNumber(r) || unicode.IsPunct(r) {
 					m.searchQuery += msg.String()

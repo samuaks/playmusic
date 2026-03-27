@@ -599,3 +599,73 @@ func TestModelUpdateEnterInSearchFocusWithEmptyQueryDoesNothing(t *testing.T) {
 		t.Fatalf("did not expect playback selection change, got current=%d", got.current)
 	}
 }
+
+func TestModelUpdateTypingInSearchFocusFiltersListLive(t *testing.T) {
+	model := NewModel([]library.Track{
+		{Trackname: "Zen Garden", Path: "/music/zen.mp3", Filename: "zen.mp3"},
+		{Trackname: "Muse", Path: "/music/muse.mp3", Filename: "muse.mp3"},
+	}, search.New(search.MockSource{}), nil)
+	model.focus = focusSearch
+
+	updatedModel, cmd := model.Update(tea.KeyMsg{
+		Type:  tea.KeyRunes,
+		Runes: []rune("z"),
+	})
+	got := updatedModel.(Model)
+
+	if cmd != nil {
+		t.Fatalf("expected nil cmd on local live filter typing, got %v", cmd)
+	}
+	if got.searchQuery != "z" {
+		t.Fatalf("expected searchQuery to be updated to %q, got %q", "z", got.searchQuery)
+	}
+	if len(got.list.Items()) != 1 {
+		t.Fatalf("expected filtered list to contain 1 item, got %d", len(got.list.Items()))
+	}
+}
+
+func TestModelUpdateTypingInListFocusDoesNotChangeQueryOrFilter(t *testing.T) {
+	model := NewModel([]library.Track{
+		{Trackname: "Alpha", Path: "/music/alpha.mp3", Filename: "alpha.mp3"},
+		{Trackname: "Beta", Path: "/music/beta.mp3", Filename: "beta.mp3"},
+	}, search.New(search.MockSource{}), nil)
+	model.focus = focusList
+
+	initialItems := len(model.list.Items())
+
+	updatedModel, _ := model.Update(tea.KeyMsg{
+		Type:  tea.KeyRunes,
+		Runes: []rune("z"),
+	})
+	got := updatedModel.(Model)
+
+	if got.searchQuery != "" {
+		t.Fatalf("expected searchQuery to stay empty in list focus, got %q", got.searchQuery)
+	}
+	if len(got.list.Items()) != initialItems {
+		t.Fatalf("expected list items to remain unchanged in list focus, got %d (want %d)", len(got.list.Items()), initialItems)
+	}
+}
+
+func TestModelUpdateBackspaceInSearchFocusUpdatesQueryAndFilter(t *testing.T) {
+	model := NewModel([]library.Track{
+		{Trackname: "Abba", Path: "/music/abba.mp3", Filename: "abba.mp3"},
+		{Trackname: "Beatles", Path: "/music/beatles.mp3", Filename: "beatles.mp3"},
+	}, search.New(search.MockSource{}), nil)
+	model.focus = focusSearch
+	model.searchQuery = "abb"
+	model.updateListItems()
+
+	updatedModel, cmd := model.Update(tea.KeyMsg{Type: tea.KeyBackspace})
+	got := updatedModel.(Model)
+
+	if cmd != nil {
+		t.Fatalf("expected nil cmd on local backspace filtering, got %v", cmd)
+	}
+	if got.searchQuery != "ab" {
+		t.Fatalf("expected searchQuery to become %q after backspace, got %q", "ab", got.searchQuery)
+	}
+	if len(got.list.Items()) != 1 {
+		t.Fatalf("expected filtered list to contain 1 item after backspace, got %d", len(got.list.Items()))
+	}
+}
