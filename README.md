@@ -61,7 +61,7 @@ Player will also search for the music in common places in your PC and will add t
 - `space` - pause/resume
 - `enter` in list focus - play selected track
 - `q` or `?` - enter search focus
-- `enter` in search focus - run external search (if query is not empty), then return to list focus
+- `enter` in search focus - apply the local filter and return to list focus
 - `esc` in search focus - clear query and return to list focus
 
 ## Requirements

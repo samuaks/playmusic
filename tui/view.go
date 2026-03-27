@@ -47,7 +47,10 @@ func (m Model) searchBarView() string {
 
 	switch m.focus {
 	case focusList:
-		query = dimmedStyle.Render(SEARCHBAR_LIST_PLACEHOLDER)
+		hint = lipgloss.NewStyle().Padding(0, 2).Render(dimmedStyle.Render(SEARCHBAR_LIST_PLACEHOLDER))
+		if m.searchQuery != "" {
+			query = dimmedStyle.Render("> " + m.searchQuery)
+		}
 	case focusSearch:
 		hint = lipgloss.NewStyle().Padding(0, 2).Render(dimmedStyle.Render(SEARCHBAR_SEARCH_HINT))
 		base := dimmedStyle.Render("> " + m.searchQuery)
@@ -60,10 +63,14 @@ func (m Model) searchBarView() string {
 		query = dimmedStyle.Render(SEARCHBAR_LIST_PLACEHOLDER)
 	}
 
-	input := lipgloss.NewStyle().Padding(0, 2).Render(query)
 	if hint != "" {
+		if query == "" {
+			return fmt.Sprintf("%s\n%s\n", title, hint)
+		}
+		input := lipgloss.NewStyle().Padding(0, 2).Render(query)
 		return fmt.Sprintf("%s\n%s\n%s\n", title, hint, input)
 	}
+	input := lipgloss.NewStyle().Padding(0, 2).Render(query)
 	return fmt.Sprintf("%s\n%s\n", title, input)
 }
 

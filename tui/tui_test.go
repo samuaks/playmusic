@@ -548,34 +548,40 @@ func TestModelUpdateEnterInListFocusStartsPlayback(t *testing.T) {
 	}
 }
 
-func TestModelUpdateEnterInSearchFocusRunsSearch(t *testing.T) {
+func TestModelUpdateEnterInSearchFocusKeepsLocalFilterAndReturnsToList(t *testing.T) {
 	model := NewModel([]library.Track{
 		{
-			Trackname: "Local Track",
-			Path:      "/music/local.mp3",
-			Filename:  "local.mp3",
+			Trackname: "Beatles - Yesterday",
+			Path:      "/music/beatles.mp3",
+			Filename:  "beatles.mp3",
+		},
+		{
+			Trackname: "Metallica - One",
+			Path:      "/music/metallica.mp3",
+			Filename:  "metallica.mp3",
 		},
 	}, nil)
 	model.focus = focusSearch
 	model.searchQuery = "beatles"
+	model.updateListItems()
 
 	updatedModel, cmd := model.Update(tea.KeyMsg{Type: tea.KeyEnter})
 	got := updatedModel.(Model)
 
-	if cmd == nil {
-		t.Fatal("expected search cmd on enter in search focus with non-empty query")
-	}
-	if !got.searching {
-		t.Fatal("expected searching state to be enabled on enter in search focus")
+	if cmd != nil {
+		t.Fatalf("expected nil cmd on enter in search focus, got %v", cmd)
 	}
 	if got.focus != focusList {
 		t.Fatalf("expected focusList after enter in search focus, got %v", got.focus)
 	}
-	if got.searchQuery != "" {
-		t.Fatalf("expected search query to be cleared on enter in search focus, got %q", got.searchQuery)
+	if got.searchQuery != "beatles" {
+		t.Fatalf("expected search query to be preserved on enter in search focus, got %q", got.searchQuery)
 	}
-	if got.current != -1 {
-		t.Fatalf("did not expect playback selection change in search focus, got current=%d", got.current)
+	if got.searching {
+		t.Fatal("did not expect searching state when applying local filter")
+	}
+	if len(got.list.Items()) != 1 {
+		t.Fatalf("expected filtered list to stay narrowed after enter, got %d items", len(got.list.Items()))
 	}
 }
 
@@ -804,11 +810,26 @@ func TestSearchBarViewShowsListPlaceholderInListFocus(t *testing.T) {
 	if !strings.Contains(view, "Press q or ? to search") {
 		t.Fatalf("expected list-focus placeholder, got %q", view)
 	}
-	if strings.Contains(view, "> beatles") {
-		t.Fatalf("did not expect query prompt in list focus, got %q", view)
+	if !strings.Contains(view, "> beatles") {
+		t.Fatalf("expected applied query in list focus, got %q", view)
 	}
-	if strings.Contains(view, "Type to filter | Enter search | Esc clear & exit") {
+	if strings.Contains(view, "Type to filter | Enter apply | Esc clear & exit") {
 		t.Fatalf("did not expect search-focus hint in list focus, got %q", view)
+	}
+}
+
+func TestSearchBarViewHidesEmptyAppliedQueryInListFocus(t *testing.T) {
+	model := NewModel(nil, nil)
+	model.focus = focusList
+	model.searchQuery = ""
+
+	view := model.searchBarView()
+
+	if !strings.Contains(view, "Press q or ? to search") {
+		t.Fatalf("expected list-focus placeholder, got %q", view)
+	}
+	if strings.Contains(view, "> ") {
+		t.Fatalf("did not expect empty applied query line in list focus, got %q", view)
 	}
 }
 
@@ -826,10 +847,10 @@ func TestSearchBarViewShowsPromptAndQueryInSearchFocus(t *testing.T) {
 	if strings.Contains(view, "Press q or ? to search") {
 		t.Fatalf("did not expect list placeholder in search focus, got %q", view)
 	}
-	if !strings.Contains(view, "Type to filter | Enter search | Esc clear & exit") {
+	if !strings.Contains(view, "Type to filter | Enter apply | Esc clear & exit") {
 		t.Fatalf("expected search-focus hint in top bar, got %q", view)
 	}
-	if strings.Contains(view, "> beatles  Type to filter | Enter search | Esc clear & exit") {
+	if strings.Contains(view, "> beatles  Type to filter | Enter apply | Esc clear & exit") {
 		t.Fatalf("expected hint and query on separate lines, got %q", view)
 	}
 }
@@ -854,7 +875,7 @@ func TestSearchBarViewShowsSpinnerWhenSearchingInSearchFocus(t *testing.T) {
 	if strings.Contains(withSpinner, "Press q or ? to search") {
 		t.Fatalf("did not expect list placeholder while searching, got %q", withSpinner)
 	}
-	if !strings.Contains(withSpinner, "Type to filter | Enter search | Esc clear & exit") {
+	if !strings.Contains(withSpinner, "Type to filter | Enter apply | Esc clear & exit") {
 		t.Fatalf("expected search-focus hint while searching, got %q", withSpinner)
 	}
 }
