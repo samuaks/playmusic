@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	. "playmusic/decoder"
 	"runtime"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -69,10 +70,7 @@ func contentKey(path string, size int64) (string, error) {
 			continue
 		}
 
-		chunkLen := fingerprintChunkSize
-		if remaining < chunkLen {
-			chunkLen = remaining
-		}
+		chunkLen := min(remaining, fingerprintChunkSize)
 
 		n, readErr := io.ReadFull(file, buf[:chunkLen])
 		if readErr != nil && readErr != io.EOF && readErr != io.ErrUnexpectedEOF {
@@ -96,14 +94,8 @@ func sampleOffsets(size int64) []int64 {
 	offsets := []int64{0}
 
 	if size > fingerprintChunkSize {
-		middle := size/2 - fingerprintChunkSize/2
-		if middle < 0 {
-			middle = 0
-		}
-		last := size - fingerprintChunkSize
-		if last < 0 {
-			last = 0
-		}
+		middle := max(size/2-fingerprintChunkSize/2, 0)
+		last := max(size-fingerprintChunkSize, 0)
 
 		offsets = appendUniqueOffset(offsets, middle)
 		offsets = appendUniqueOffset(offsets, last)
@@ -113,10 +105,8 @@ func sampleOffsets(size int64) []int64 {
 }
 
 func appendUniqueOffset(offsets []int64, candidate int64) []int64 {
-	for _, offset := range offsets {
-		if offset == candidate {
-			return offsets
-		}
+	if slices.Contains(offsets, candidate) {
+		return offsets
 	}
 	return append(offsets, candidate)
 }
@@ -141,13 +131,14 @@ func (s *scanState) shouldInclude(path string, d fs.DirEntry) bool {
 	}
 
 	info, infoErr := d.Info()
-	if infoErr == nil {
-		if exactKey, err := contentKey(path, info.Size()); err == nil && exactKey != "" {
-			if _, exists := s.seenContents[exactKey]; exists {
-				return false
-			}
-			s.seenContents[exactKey] = struct{}{}
+	if infoErr != nil {
+		return false
+	}
+	if exactKey, err := contentKey(path, info.Size()); err == nil && exactKey != "" {
+		if _, exists := s.seenContents[exactKey]; exists {
+			return false
 		}
+		s.seenContents[exactKey] = struct{}{}
 	}
 
 	s.seenPaths[pathKey] = struct{}{}
