@@ -3,12 +3,13 @@ package library
 import (
 	"crypto/sha1"
 	"encoding/hex"
-	"io/fs"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	. "playmusic/decoder"
 	"runtime"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -18,6 +19,8 @@ type scanState struct {
 	seenSignatures map[string]struct{}
 	seenContents   map[string]struct{}
 }
+
+const fingerprintChunkSize int64 = 64 * 1024
 
 func newScanState(seenPaths, seenSignatures, seenContents map[string]struct{}) *scanState {
 	if seenContents == nil {
@@ -54,11 +57,58 @@ func contentKey(path string, size int64) (string, error) {
 	defer file.Close()
 
 	hasher := sha1.New()
-	if _, err := io.Copy(hasher, file); err != nil {
-		return "", err
+
+	offsets := sampleOffsets(size)
+	buf := make([]byte, fingerprintChunkSize)
+	for _, offset := range offsets {
+		if _, err := file.Seek(offset, io.SeekStart); err != nil {
+			return "", err
+		}
+
+		remaining := size - offset
+		if remaining <= 0 {
+			continue
+		}
+
+		chunkLen := min(remaining, fingerprintChunkSize)
+
+		n, readErr := io.ReadFull(file, buf[:chunkLen])
+		if readErr != nil && readErr != io.EOF && readErr != io.ErrUnexpectedEOF {
+			return "", readErr
+		}
+		if n > 0 {
+			if _, err := hasher.Write(buf[:n]); err != nil {
+				return "", err
+			}
+		}
 	}
 
 	return strconv.FormatInt(size, 10) + ":" + hex.EncodeToString(hasher.Sum(nil)), nil
+}
+
+func sampleOffsets(size int64) []int64 {
+	if size <= 0 {
+		return []int64{0}
+	}
+
+	offsets := []int64{0}
+
+	if size > fingerprintChunkSize {
+		middle := max(size/2-fingerprintChunkSize/2, 0)
+		last := max(size-fingerprintChunkSize, 0)
+
+		offsets = appendUniqueOffset(offsets, middle)
+		offsets = appendUniqueOffset(offsets, last)
+	}
+
+	return offsets
+}
+
+func appendUniqueOffset(offsets []int64, candidate int64) []int64 {
+	if slices.Contains(offsets, candidate) {
+		return offsets
+	}
+	return append(offsets, candidate)
 }
 
 func (s *scanState) shouldInclude(path string, d fs.DirEntry) bool {
@@ -81,13 +131,14 @@ func (s *scanState) shouldInclude(path string, d fs.DirEntry) bool {
 	}
 
 	info, infoErr := d.Info()
-	if infoErr == nil {
-		if exactKey, err := contentKey(path, info.Size()); err == nil && exactKey != "" {
-			if _, exists := s.seenContents[exactKey]; exists {
-				return false
-			}
-			s.seenContents[exactKey] = struct{}{}
+	if infoErr != nil {
+		return false
+	}
+	if exactKey, err := contentKey(path, info.Size()); err == nil && exactKey != "" {
+		if _, exists := s.seenContents[exactKey]; exists {
+			return false
 		}
+		s.seenContents[exactKey] = struct{}{}
 	}
 
 	s.seenPaths[pathKey] = struct{}{}
