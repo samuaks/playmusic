@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"os"
 	"os/exec"
 	"path/filepath"
 	"playmusic/helpers"
+	"playmusic/paths"
 	"strings"
 	"time"
 
@@ -142,12 +142,12 @@ func GetMusicJamPlaylistWithQueryJson(query string) ([]TrackInfo, error) {
 }
 
 func DownloadAudio(ytVideoURL string) error {
-	home, err := os.UserHomeDir()
+	userMediaDir, err := paths.UserMediaDir()
 	if err != nil {
 		return err
 	}
 
-	outputPath := filepath.Join(home, "Media", "%(title)s.%(ext)s")
+	outputPath := filepath.Join(userMediaDir, "%(title)s.%(ext)s")
 
 	ytdlpCmd := ytdlp.New()
 

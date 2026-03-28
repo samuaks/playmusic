@@ -5,11 +5,12 @@ import (
 	"os"
 	"path/filepath"
 	. "playmusic/helpers"
+	"playmusic/paths"
 	"strings"
 	"time"
 )
 
-const mediaLibraryDir = "Media"
+const mediaLibraryDir = paths.MediaLibraryDir
 
 type Track struct {
 	Trackname  string
@@ -66,6 +67,10 @@ func LoadLibraries(dirs ...string) ([]Track, error) {
 func DefaultLibraryDirs() []string {
 	dirs := []string{
 		filepath.Clean(mediaLibraryDir),
+	}
+
+	if userMediaDir, err := paths.UserMediaDir(); err == nil && strings.TrimSpace(userMediaDir) != "" {
+		dirs = append(dirs, userMediaDir)
 	}
 
 	home, err := os.UserHomeDir()
