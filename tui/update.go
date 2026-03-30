@@ -163,7 +163,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// may overlap or the scanner may revisit the same location.
 		if m.trackIndexByPath(msg.track.Path) == -1 {
 			m.tracks = append(m.tracks, msg.track)
-			m.sortTracks()
 			m.scanAdded++
 			m.updateListItems()
 		}
@@ -176,7 +175,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.tracks = append(m.tracks, msg.track)
 			m.scanAdded++
 		}
-		m.sortTracks()
 		m.updateListItems()
 		return m, waitForLibraryEvent(m.scanCh)
 	case libraryScanErrorMsg:
