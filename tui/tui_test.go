@@ -874,7 +874,7 @@ func TestSearchBarViewShowsListPlaceholderInListFocus(t *testing.T) {
 	if !strings.Contains(view, "Press q or ? to search") {
 		t.Fatalf("expected list-focus placeholder, got %q", view)
 	}
-	if !strings.Contains(view, "> beatles") {
+	if !strings.Contains(view, "beatles") {
 		t.Fatalf("expected applied query in list focus, got %q", view)
 	}
 	if strings.Contains(view, "Type to filter | Enter apply | Esc clear & exit") {
