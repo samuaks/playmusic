@@ -61,7 +61,7 @@ func LoadLibraries(dirs ...string) ([]Track, error) {
 	if len(tracks) == 0 {
 		return nil, nil
 	}
-	return sortingOfTracks(tracks), nil
+	return tracks, nil
 }
 
 func DefaultLibraryDirs() []string {
