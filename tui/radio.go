@@ -31,6 +31,7 @@ type OnlineModel struct {
 	width           int
 	height          int
 	trackDownloaded bool
+	loading         bool
 }
 
 func NewOnlineModel(tracks []library.Track, searcher *search.Searcher) OnlineModel {
@@ -130,7 +131,14 @@ func (m *OnlineModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		if len(m.tracks) > 0 {
 			m.result = &m.tracks[0]
-			return m, m.playCurrent()
+			cmd := m.playCurrent()
+
+			if len(m.tracks) < 10 {
+				m.loading = true
+				cmd = tea.Batch(cmd, m.addTracksToRadioPlaylist())
+			}
+
+			return m, cmd
 		}
 
 		return m, nil
@@ -141,7 +149,16 @@ func (m *OnlineModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		if m.current < len(m.tracks) {
 			m.result = &m.tracks[m.current]
-			return m, m.playCurrent()
+			// return m, m.playCurrent()
+
+			var cmd tea.Cmd = m.playCurrent()
+			if m.current >= len(m.tracks)-5 && !m.loading {
+				m.loading = true
+				cmd = tea.Batch(cmd, m.addTracksToRadioPlaylist())
+			}
+
+			return m, cmd
+
 		}
 		return m, nil
 
@@ -183,6 +200,9 @@ func (m *OnlineModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.trackDownloaded = false
 		return m, nil
 
+	case timeToAddTracksMsq:
+		m.loading = false
+		m.tracks = append(m.tracks, msg.tracks...)
 	}
 
 	return m, nil
@@ -300,5 +320,27 @@ func waitTrackDone(p *player.Player) tea.Cmd {
 		}
 		<-p.Done()
 		return trackDoneMsg{}
+	}
+}
+
+func (m *OnlineModel) addTracksToRadioPlaylist() tea.Cmd {
+	return func() tea.Msg {
+		recTracks, err := yt_dlp.GetRecomendedWithYTVideoURL(m.tracks[m.current].YTVideoURL)
+		if err != nil || len(recTracks) == 0 {
+			return nil //maybe should do smth in this case
+		}
+
+		var tracks []library.Track
+		for _, info := range recTracks {
+			tracks = append(tracks, library.Track{
+				Trackname:  info.Trackname,
+				YTVideoURL: info.YTVideoURL,
+				Duration:   info.Duration,
+			})
+		}
+
+		m.loading = false
+
+		return timeToAddTracksMsq{tracks: tracks}
 	}
 }

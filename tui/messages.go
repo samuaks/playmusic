@@ -48,3 +48,7 @@ type searchResultsMsg struct {
 type trackDownloadedMsg struct{}
 
 type clearNotificationMsg struct{}
+
+type timeToAddTracksMsq struct {
+	tracks []library.Track
+}
