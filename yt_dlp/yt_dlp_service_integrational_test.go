@@ -110,3 +110,27 @@ func TestShouldGetListOfTracks(t *testing.T) {
 
 	t.Logf("%s", out)
 }
+
+func TestShouldGetListOfRecomendedTracks(t *testing.T) {
+	resInst, err := ytdlp.Install(context.TODO(), nil)
+	if err != nil {
+		t.Fatal("Can't install and use yt-dlp.")
+	}
+
+	SetBinaryPath(resInst.Executable)
+
+	out, err := GetRecomendedWithYTVideoURL("https://www.youtube.com/watch?v=7Fncun4ObQk")
+	if err != nil {
+		t.Fatalf("Failed to receive list of tracks: %v", err)
+	}
+
+	if out == nil {
+		t.Fatal("No result from the request.")
+	}
+
+	if len(out) == 0 {
+		t.Fatal("Not enough elements in the result.")
+	}
+
+	t.Logf("%s", out)
+}

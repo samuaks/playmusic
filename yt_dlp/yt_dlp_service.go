@@ -89,6 +89,7 @@ func GetAudioStreamPipe(ytVideoURL string) (io.ReadCloser, *exec.Cmd, error) {
 	return stdout, cmd, nil
 }
 
+// not used in the current impl
 func GetYTVideoInfo(query string) (string, string, time.Duration, error) {
 	ytdlpCommand := ytdlp.New()
 
@@ -121,7 +122,7 @@ func GetMusicJamPlaylistWithQueryJson(query string) ([]TrackInfo, error) {
 		MatchFilters("duration > 120 & duration < 540").
 		DumpJSON()
 
-	out, err := ytdlpCommand.Run(context.TODO(), "ytsearch20:"+query+" topic ") //20 results
+	out, err := ytdlpCommand.Run(context.TODO(), "ytsearch10:"+query+" topic ") //10 results
 	if err != nil {
 		return nil, err
 	}
@@ -140,6 +141,48 @@ func GetMusicJamPlaylistWithQueryJson(query string) ([]TrackInfo, error) {
 	}
 
 	return playlist, nil
+}
+
+// playlist with kinda similar tracks
+func GetRecomendedWithYTVideoURL(ytVideoURL string) ([]TrackInfo, error) {
+	var tracklist []TrackInfo
+	ytdlpCommand := ytdlp.New()
+
+	if jsAvailable {
+		ytdlpCommand = ytdlpCommand.JsRuntimes("node")
+	}
+
+	ytdlpCommand = ytdlpCommand.
+		NoWarnings().
+		Quiet().
+		FlatPlaylist().
+		MatchFilters("duration > 120 & duration < 540").
+		PlaylistItems("1-20").
+		DumpJSON()
+
+	splitURL := strings.Split(ytVideoURL, "?v=")
+	ytVideoID := splitURL[1]
+	mixQueryURL := "https://www.youtube.com/watch?v=" + ytVideoID + "&list=RD" + ytVideoID
+
+	out, err := ytdlpCommand.Run(context.TODO(), mixQueryURL)
+	if err != nil {
+		return nil, err
+	}
+
+	entries, err := YTVideoInfoParser(*out)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, data := range entries {
+		tracklist = append(tracklist, TrackInfo{
+			Trackname:  data.Author + " - " + data.Name,
+			YTVideoURL: data.URL,
+			Duration:   time.Duration(data.Duration * float64(time.Second)),
+		})
+	}
+
+	return tracklist, nil
 }
 
 func DownloadAudio(ytVideoURL string) error {
