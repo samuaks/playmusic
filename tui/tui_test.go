@@ -197,7 +197,7 @@ func TestModelUpdateTracksAddedFromBackgroundScan(t *testing.T) {
 	}
 }
 
-func TestModelUpdateKeepsTracksSortedWhenBackgroundTrackAdded(t *testing.T) {
+func TestModelUpdateAppendsBackgroundTrackInScanOrder(t *testing.T) {
 	model := NewModel([]library.Track{
 		{Trackname: "Bravo", Path: "/music/bravo.mp3", Filename: "bravo.mp3"},
 		{Trackname: "Delta", Path: "/music/delta.mp3", Filename: "delta.mp3"},
@@ -215,12 +215,12 @@ func TestModelUpdateKeepsTracksSortedWhenBackgroundTrackAdded(t *testing.T) {
 	if len(got.tracks) != 3 {
 		t.Fatalf("expected 3 tracks after background add, got %d", len(got.tracks))
 	}
-	if got.tracks[0].Trackname != "Alpha" || got.tracks[1].Trackname != "Bravo" || got.tracks[2].Trackname != "Delta" {
-		t.Fatalf("expected tracks to remain sorted, got %q, %q, %q", got.tracks[0].Trackname, got.tracks[1].Trackname, got.tracks[2].Trackname)
+	if got.tracks[0].Trackname != "Bravo" || got.tracks[1].Trackname != "Delta" || got.tracks[2].Trackname != "Alpha" {
+		t.Fatalf("expected scan-order append, got %q, %q, %q", got.tracks[0].Trackname, got.tracks[1].Trackname, got.tracks[2].Trackname)
 	}
 }
 
-func TestModelUpdateKeepsCurrentTrackAfterResort(t *testing.T) {
+func TestModelUpdateKeepsCurrentTrackIndexWhenBackgroundTrackAdded(t *testing.T) {
 	model := NewModel([]library.Track{
 		{Trackname: "Bravo", Path: "/music/bravo.mp3", Filename: "bravo.mp3"},
 		{Trackname: "Delta", Path: "/music/delta.mp3", Filename: "delta.mp3"},
@@ -236,11 +236,36 @@ func TestModelUpdateKeepsCurrentTrackAfterResort(t *testing.T) {
 	})
 
 	got := updatedModel.(Model)
-	if got.current != 2 {
-		t.Fatalf("expected current track index to follow Delta after resort, got %d", got.current)
+	if got.current != 1 {
+		t.Fatalf("expected current track index to stay unchanged, got %d", got.current)
 	}
 	if got.tracks[got.current].Trackname != "Delta" {
 		t.Fatalf("expected current track to remain Delta, got %q", got.tracks[got.current].Trackname)
+	}
+}
+
+func TestModelUpdateDoesNotReorderOnLibraryTrackUpdatedMsg(t *testing.T) {
+	model := NewModel([]library.Track{
+		{Trackname: "Bravo", Path: "/music/bravo.mp3", Filename: "bravo.mp3"},
+		{Trackname: "Delta", Path: "/music/delta.mp3", Filename: "delta.mp3"},
+	}, make(chan library.ScanEvent))
+
+	updatedModel, _ := model.Update(libraryTrackUpdatedMsg{
+		track: library.Track{
+			Trackname: "Alpha",
+			Path:      "/music/delta.mp3",
+			Filename:  "delta.mp3",
+			Artist:    "Artist",
+			Title:     "Alpha",
+		},
+	})
+	got := updatedModel.(Model)
+
+	if got.tracks[0].Path != "/music/bravo.mp3" || got.tracks[1].Path != "/music/delta.mp3" {
+		t.Fatalf("expected order to stay unchanged, got %q then %q", got.tracks[0].Path, got.tracks[1].Path)
+	}
+	if got.tracks[1].Trackname != "Alpha" {
+		t.Fatalf("expected in-place metadata update, got %q", got.tracks[1].Trackname)
 	}
 }
 
@@ -849,7 +874,7 @@ func TestSearchBarViewShowsListPlaceholderInListFocus(t *testing.T) {
 	if !strings.Contains(view, "Press q or ? to search") {
 		t.Fatalf("expected list-focus placeholder, got %q", view)
 	}
-	if !strings.Contains(view, "> beatles") {
+	if !strings.Contains(view, "beatles") {
 		t.Fatalf("expected applied query in list focus, got %q", view)
 	}
 	if strings.Contains(view, "Type to filter | Enter apply | Esc clear & exit") {
