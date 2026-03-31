@@ -118,6 +118,7 @@ func GetMusicJamPlaylistWithQueryJson(query string) ([]TrackInfo, error) {
 		NoWarnings().
 		Quiet().
 		FlatPlaylist().
+		MatchFilters("duration > 120 & duration < 540").
 		DumpJSON()
 
 	out, err := ytdlpCommand.Run(context.TODO(), "ytsearch20:"+query+" topic ") //20 results
