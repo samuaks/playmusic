@@ -13,7 +13,7 @@ func setTerminalTitle(title string) {
 	fmt.Printf("\033]0;%s\007", title)
 }
 
-func (m Model) filteredTracks() []Track {
+func (m *Model) filteredTracks() []Track {
 	if m.searchQuery == "" {
 		return m.tracks
 	}

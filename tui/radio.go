@@ -87,16 +87,22 @@ func (m OnlineModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "ctrl+b":
 			m.player.Prev()
 			return m, nil
+
 		default:
-			if len(msg.String()) == 1 {
-				r := rune(msg.String()[0])
-				if unicode.IsLetter(r) || unicode.IsNumber(r) || unicode.IsSpace(r) || unicode.IsPunct(r) {
-					m.searchQuery += msg.String()
-					return m, debounceSearch(m.searchQuery)
+			if len(msg.String()) > 0 {
+				runes := []rune(msg.String())
+
+				if len(runes) == 1 {
+					r := runes[0]
+
+					if unicode.IsGraphic(r) {
+						m.searchQuery += msg.String()
+						m.updateListItems()
+						return m, debounceSearch(m.searchQuery)
+					}
 				}
 			}
 		}
-
 	case searchDebounceMsg:
 		if msg.query == m.searchQuery && msg.query != "" {
 			m.searching = true
