@@ -152,7 +152,8 @@ func (m *OnlineModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// return m, m.playCurrent()
 
 			var cmd tea.Cmd = m.playCurrent()
-			if m.current >= len(m.tracks)-5 && !m.loading {
+
+			if m.current >= len(m.tracks)-3 && !m.loading {
 				m.loading = true
 				cmd = tea.Batch(cmd, m.addTracksToRadioPlaylist())
 			}
@@ -166,11 +167,20 @@ func (m *OnlineModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.current++
 		m.elapsed = 0
 
+		var cmd tea.Cmd = m.playCurrent()
+
 		if m.current >= len(m.tracks) {
 			m.current = len(m.tracks) - 1
 		}
+
+		if m.current >= len(m.tracks)-3 && !m.loading {
+			m.loading = true
+			cmd = tea.Batch(cmd, m.addTracksToRadioPlaylist())
+		}
+
 		m.result = &m.tracks[m.current]
-		return m, m.playCurrent()
+
+		return m, cmd
 
 	case trackPrevMsg:
 		m.elapsed = 0
@@ -266,7 +276,7 @@ func (m *OnlineModel) View() string {
 	return sb.String()
 }
 
-// not getting why progress bar is not updating when
+// not getting why % progress bar is not showing
 func (m OnlineModel) radioTrackProgress() (percent float64, elapsed string) {
 	if m.current == -1 || len(m.tracks) == 0 {
 		return 0, "0:00 / 0:00"
@@ -330,8 +340,10 @@ func (m *OnlineModel) addTracksToRadioPlaylist() tea.Cmd {
 			return nil //maybe should do smth in this case
 		}
 
+		dedupTracks := m.deduplicateFoundTracks(recTracks)
+
 		var tracks []library.Track
-		for _, info := range recTracks {
+		for _, info := range dedupTracks {
 			tracks = append(tracks, library.Track{
 				Trackname:  info.Trackname,
 				YTVideoURL: info.YTVideoURL,
@@ -343,4 +355,25 @@ func (m *OnlineModel) addTracksToRadioPlaylist() tea.Cmd {
 
 		return timeToAddTracksMsq{tracks: tracks}
 	}
+}
+
+func (m *OnlineModel) deduplicateFoundTracks(tracks []yt_dlp.TrackInfo) []yt_dlp.TrackInfo {
+	seen := make(map[string]struct{})
+	var filtered []yt_dlp.TrackInfo
+
+	//filling with existing tracks
+	//should be global?
+	for _, track := range m.tracks {
+		seen[track.YTVideoURL] = struct{}{}
+	}
+
+	for _, foundtrack := range tracks {
+		//apparently map has value and bool field(key check) if value exists - returns true in bool
+		if _, ok := seen[foundtrack.YTVideoURL]; !ok {
+			seen[foundtrack.YTVideoURL] = struct{}{}
+			filtered = append(filtered, foundtrack)
+		}
+	}
+
+	return filtered
 }

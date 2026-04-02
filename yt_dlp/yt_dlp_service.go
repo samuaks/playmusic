@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"math/rand/v2"
 	"os/exec"
 	"path/filepath"
 	"playmusic/helpers"
@@ -122,7 +123,7 @@ func GetMusicJamPlaylistWithQueryJson(query string) ([]TrackInfo, error) {
 		MatchFilters("duration > 120 & duration < 540").
 		DumpJSON()
 
-	out, err := ytdlpCommand.Run(context.TODO(), "ytsearch10:"+query+" topic ") //10 results
+	out, err := ytdlpCommand.Run(context.TODO(), "ytsearch20:"+query+" topic ") //20 results
 	if err != nil {
 		return nil, err
 	}
@@ -131,6 +132,11 @@ func GetMusicJamPlaylistWithQueryJson(query string) ([]TrackInfo, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	//randomizing the order
+	rand.Shuffle(len(entries), func(i, j int) {
+		entries[i], entries[j] = entries[j], entries[i]
+	})
 
 	for _, data := range entries {
 		playlist = append(playlist, TrackInfo{
@@ -157,7 +163,7 @@ func GetRecomendedWithYTVideoURL(ytVideoURL string) ([]TrackInfo, error) {
 		Quiet().
 		FlatPlaylist().
 		MatchFilters("duration > 120 & duration < 540").
-		PlaylistItems("1-20").
+		PlaylistItems("1-5").
 		DumpJSON()
 
 	splitURL := strings.Split(ytVideoURL, "?v=")
