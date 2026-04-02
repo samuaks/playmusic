@@ -123,7 +123,7 @@ func GetMusicJamPlaylistWithQueryJson(query string) ([]TrackInfo, error) {
 		MatchFilters("duration > 120 & duration < 540").
 		DumpJSON()
 
-	out, err := ytdlpCommand.Run(context.TODO(), "ytsearch20:"+query+" topic ") //20 results
+	out, err := ytdlpCommand.Run(context.TODO(), "ytsearch10:"+query+" topic ") //20 results
 	if err != nil {
 		return nil, err
 	}
@@ -133,12 +133,15 @@ func GetMusicJamPlaylistWithQueryJson(query string) ([]TrackInfo, error) {
 		return nil, err
 	}
 
+	//filter some unrelated to music videos
+	filtered := ClearUnrelatedToMusicGarbage(entries)
+
 	//randomizing the order
-	rand.Shuffle(len(entries), func(i, j int) {
-		entries[i], entries[j] = entries[j], entries[i]
+	rand.Shuffle(len(filtered), func(i, j int) {
+		filtered[i], filtered[j] = filtered[j], filtered[i]
 	})
 
-	for _, data := range entries {
+	for _, data := range filtered {
 		playlist = append(playlist, TrackInfo{
 			Trackname:  data.Author + " - " + data.Name,
 			YTVideoURL: data.URL,

@@ -32,3 +32,37 @@ func YTVideoInfoParser(queryRes ytdlp.Result) ([]YTEntry, error) {
 
 	return entries, nil
 }
+
+var banned = []string{
+	"react",
+	"reaction",
+	"first time hearing",
+	"first listen",
+	"analysis",
+	"REACT",
+	"REACTION",
+}
+
+func ClearUnrelatedToMusicGarbage(entries []YTEntry) []YTEntry {
+	var filtered = make([]YTEntry, 0, len(entries))
+
+	for _, entry := range entries {
+		title := strings.ToLower(entry.Name)
+
+		skip := false
+		for _, key := range banned {
+			if strings.Contains(title, key) {
+				skip = true
+				break
+			}
+		}
+
+		if skip {
+			continue
+		}
+
+		filtered = append(filtered, entry)
+	}
+
+	return filtered
+}
