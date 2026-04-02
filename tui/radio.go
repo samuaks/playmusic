@@ -60,7 +60,13 @@ func (m OnlineModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		case "backspace":
 			if len(m.searchQuery) > 0 {
-				m.searchQuery = m.searchQuery[:len(m.searchQuery)-1]
+				queryRunes := []rune(m.searchQuery)
+				if len(queryRunes) > 0 {
+					queryRunes = queryRunes[:len(queryRunes)-1]
+					m.searchQuery = string(queryRunes)
+				}
+				m.updateListItems()
+				return m, debounceSearch(m.searchQuery)
 			}
 			return m, nil
 		case "esc":
