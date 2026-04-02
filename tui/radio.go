@@ -87,9 +87,15 @@ func (m OnlineModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, nil
 			}
 		case "esc":
-			m.searchQuery = ""
-			m.focus = focusSearch
-			return m, nil
+			if m.focus == focusPlayer {
+				m.searchQuery = ""
+				m.focus = focusSearch
+				return m, nil
+			}
+			if m.focus == focusSearch {
+				m.focus = focusPlayer
+				return m, nil
+			}
 		case "enter":
 			if m.focus == focusSearch && m.searchQuery != "" {
 				if m.result != nil {
