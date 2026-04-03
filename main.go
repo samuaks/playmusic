@@ -3,8 +3,10 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"os"
+	"playmusic/ffmpeg"
 	lib "playmusic/library"
 	"playmusic/search"
 	"playmusic/tui"
@@ -22,7 +24,13 @@ func main() {
 
 	var ui *tea.Program
 
+	var ffmpegAvailable = ffmpeg.InitFFmpeg()
+
 	if len(os.Args) > 1 && os.Args[1] == "--radio" {
+		if !ffmpegAvailable {
+			log.Fatal("Can't run radio without ffmpeg installed.")
+		}
+
 		resInst, err := ytdlp.Install(context.TODO(), nil)
 		if err != nil {
 			fmt.Printf("Warning: failed to install yt-dlp: %v\n", err)
@@ -57,7 +65,6 @@ func main() {
 	}
 
 	if _, err := ui.Run(); err != nil {
-		fmt.Printf("Error: %v\n", err)
-		os.Exit(1)
+		log.Fatal(fmt.Printf("Error: %v\n", err))
 	}
 }

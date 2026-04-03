@@ -22,21 +22,10 @@ import (
 	"github.com/gopxl/beep/v2/wav"
 )
 
-var ffmpegAvailable bool
-
 type ProdFFmpeg struct{}
 
 func (pr ProdFFmpeg) Probe(path string) (string, error) {
 	return ff.Probe(path)
-}
-
-func init() {
-	_, err := exec.LookPath("ffmpeg")
-	ffmpegAvailable = err == nil
-}
-
-func IsFFmpegAvailable() bool {
-	return ffmpegAvailable
 }
 
 var beepFormats = map[string]bool{
@@ -57,7 +46,7 @@ func IsSupported(filename string) bool {
 	if beepFormats[ext] {
 		return true
 	}
-	return ffmpegAvailable && ffmpegFormats[ext]
+	return ffmpeg.IsFFmpegAvailable() && ffmpegFormats[ext]
 }
 
 type decoderFunc func(io.ReadCloser) (beep.StreamSeekCloser, beep.Format, error)
@@ -85,7 +74,7 @@ func Decode(path string) (beep.StreamSeekCloser, beep.Format, error) {
 		return streamer, format, nil
 	}
 
-	if !IsFFmpegAvailable() {
+	if !ffmpeg.IsFFmpegAvailable() {
 		return nil, beep.Format{}, fmt.Errorf("unsupported file format: %s and ffmpeg is not available", ext)
 	}
 
@@ -140,7 +129,7 @@ func decodeWithFFmpeg(ffInt ffmpeg.FFmpegInterface, path string) (beep.StreamSee
 // it is actual streaming: yt-dlp returns stream with bytes and ffmpeg decodes it on the fly,
 // so there is no need to wait until the whole file is downloaded
 func DecodeStreamUrl(url string) (beep.Streamer, beep.Format, func(), error) {
-	if !IsFFmpegAvailable() {
+	if !ffmpeg.IsFFmpegAvailable() {
 		err := fmt.Errorf("Can't docode stream without ffmpeg.")
 		return nil, beep.Format{}, nil, err
 	}
@@ -219,7 +208,7 @@ func ProbeDuration(path string) (time.Duration, error) {
 	if err == nil && duration > 0 {
 		return duration, nil
 	}
-	if !IsFFmpegAvailable() {
+	if !ffmpeg.IsFFmpegAvailable() {
 		return 0, fmt.Errorf("could not determine duration and ffmpeg is not available")
 	}
 

@@ -2,7 +2,7 @@ package player
 
 import (
 	"path/filepath"
-	. "playmusic/decoder"
+	"playmusic/ffmpeg"
 	"runtime"
 	"testing"
 	"time"
@@ -82,7 +82,7 @@ func TestSpeakerInitializedOnFirstPlay(t *testing.T) {
 }
 
 func TestPlayM4AWithFFmpeg(t *testing.T) {
-	if !IsFFmpegAvailable() {
+	if !ffmpeg.IsFFmpegAvailable() {
 		t.Skip("skipping, ffmpeg not available")
 	}
 

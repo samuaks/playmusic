@@ -1,6 +1,9 @@
 package decoder
 
-import "testing"
+import (
+	"playmusic/ffmpeg"
+	"testing"
+)
 
 func TestIsSupported(t *testing.T) {
 	cases := []struct {
@@ -19,7 +22,7 @@ func TestIsSupported(t *testing.T) {
 		{"song.opus", true, true},
 	}
 	for _, c := range cases {
-		if c.needFFmpeg && !IsFFmpegAvailable() {
+		if c.needFFmpeg && !ffmpeg.IsFFmpegAvailable() {
 			t.Logf("skipping %q test, ffmpeg not available", c.filename)
 			continue
 		}
