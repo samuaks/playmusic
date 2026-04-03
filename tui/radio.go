@@ -281,22 +281,26 @@ func (m OnlineModel) View() string {
 	sb.WriteString(titleStyle.Padding(0, 2).Render("Music Player — Online Radio") + "\n")
 
 	var query string
+	var prefix string = "> "
+	if m.searching {
+		prefix = m.spinner.View() + " "
+	}
 	switch m.focus {
 	case focusSearch:
-		query = currentStyle.Render("> type artist or genre query to play music...")
+		query = currentStyle.Render(prefix + "type artist or genre query to play music...")
 		if m.searchQuery != "" {
-			query = currentStyle.Render("> " + m.searchQuery)
+			query = currentStyle.Render(prefix + m.searchQuery)
 		}
 	case focusPlayer:
 		if m.searchQuery == "" {
-			query = dimmedStyle.Render("> type artist or genre query to play music...")
+			query = dimmedStyle.Render(prefix + "type artist or genre query to play music...")
 		}
-		query = dimmedStyle.Render("> " + m.searchQuery)
+		query = dimmedStyle.Render(prefix + m.searchQuery)
 	}
 
-	if m.searching {
-		query = m.spinner.View() + dimmedStyle.Render(m.searchQuery)
-	}
+	// if m.searching {
+	// 	query = m.spinner.View() + dimmedStyle.Render(m.searchQuery)
+	// }
 
 	sb.WriteString(lipgloss.NewStyle().Padding(0, 2).Render(query) + "\n\n")
 
