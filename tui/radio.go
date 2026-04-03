@@ -17,6 +17,13 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
+type focusMode int
+
+const (
+	focusPlayer focusMode = iota
+	focusSearch
+)
+
 type OnlineModel struct {
 	tracks          []library.Track
 	current         int
@@ -32,6 +39,7 @@ type OnlineModel struct {
 	height          int
 	trackDownloaded bool
 	loading         bool
+	focus           focusMode
 }
 
 func NewOnlineModel(tracks []library.Track, searcher *search.Searcher) OnlineModel {
@@ -43,6 +51,7 @@ func NewOnlineModel(tracks []library.Track, searcher *search.Searcher) OnlineMod
 		searcher: searcher,
 		player:   &player.Player{},
 		spinner:  s,
+		focus:    focusSearch,
 	}
 }
 
@@ -50,7 +59,7 @@ func (m OnlineModel) Init() tea.Cmd {
 	return tick()
 }
 
-func (m *OnlineModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m OnlineModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
@@ -61,20 +70,45 @@ func (m *OnlineModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "ctrl+q", "ctrl+c":
 			m.player.Stop()
 			return m, tea.Quit
+		case "q", "?":
+			if m.focus == focusSearch {
+				m.searchQuery += msg.String()
+				return m, nil
+			}
+			if m.focus == focusPlayer {
+				m.focus = focusSearch
+				return m, nil
+			}
 		case "backspace":
-			if len(m.searchQuery) > 0 {
-				m.searchQuery = m.searchQuery[:len(m.searchQuery)-1]
+			if m.focus == focusSearch && len(m.searchQuery) > 0 {
+				if len(m.searchQuery) > 0 {
+					m.searchQuery = m.searchQuery[:len(m.searchQuery)-1]
+				}
+				return m, nil
 			}
-			return m, nil
 		case "esc":
-			m.searchQuery = ""
-			return m, nil
-		case "enter":
-			if m.result != nil {
-				m.player.Stop()
+			if m.focus == focusPlayer {
+				m.searchQuery = ""
+				m.focus = focusSearch
+				return m, nil
 			}
-			return m, debounceSearch(m.searchQuery)
-		case "ctrl+p":
+			if m.focus == focusSearch {
+				m.focus = focusPlayer
+				return m, nil
+			}
+		case "enter":
+			if m.focus == focusSearch && m.searchQuery != "" {
+				if m.result != nil {
+					m.player.Stop()
+				}
+				m.focus = focusPlayer
+				return m, debounceSearch(m.searchQuery)
+			}
+		case " ":
+			if m.focus == focusSearch {
+				m.searchQuery += msg.String()
+				return m, nil
+			}
 			if m.paused {
 				m.player.Resume()
 				m.paused = false
@@ -83,20 +117,26 @@ func (m *OnlineModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.paused = true
 			}
 			return m, nil
-		case "ctrl+n":
-			m.player.Next()
-			return m, nil
-		case "ctrl+b":
-			m.player.Prev()
-			return m, nil
+		case "right":
+			if m.focus == focusPlayer {
+				m.player.Next()
+				return m, nil
+			}
+		case "left":
+			if m.focus == focusPlayer {
+				m.player.Prev()
+				return m, nil
+			}
 		case "ctrl+d":
 			return m, m.downloadTrack()
 		default:
-			if len(msg.String()) == 1 {
-				r := rune(msg.String()[0])
-				if unicode.IsLetter(r) || unicode.IsNumber(r) || unicode.IsSpace(r) || unicode.IsPunct(r) {
-					m.searchQuery += msg.String()
-					return m, debounceSearch(m.searchQuery)
+			if m.focus == focusSearch && len(msg.String()) > 0 {
+				if len(msg.String()) == 1 {
+					r := rune(msg.String()[0])
+					if unicode.IsLetter(r) || unicode.IsNumber(r) || unicode.IsSpace(r) || unicode.IsPunct(r) {
+						m.searchQuery += msg.String()
+						return m, nil
+					}
 				}
 			}
 		}
@@ -228,25 +268,36 @@ func (m *OnlineModel) runOnlineSearch(query string) tea.Cmd {
 	}
 }
 
-func (m *OnlineModel) downloadTrack() tea.Cmd {
+func (m OnlineModel) downloadTrack() tea.Cmd {
 	return func() tea.Msg {
 		_ = yt_dlp.DownloadAudio(m.tracks[m.current].YTVideoURL)
 		return trackDownloadedMsg{}
 	}
 }
 
-func (m *OnlineModel) View() string {
+func (m OnlineModel) View() string {
 	var sb strings.Builder
 
 	sb.WriteString(titleStyle.Padding(0, 2).Render("Music Player — Online Radio") + "\n")
 
-	query := "> " + m.searchQuery
-	if m.searchQuery == "" {
-		query = dimmedStyle.Render("> type artist or genre query to play music...")
+	var query string
+	switch m.focus {
+	case focusSearch:
+		query = currentStyle.Render("> type artist or genre query to play music...")
+		if m.searchQuery != "" {
+			query = currentStyle.Render("> " + m.searchQuery)
+		}
+	case focusPlayer:
+		if m.searchQuery == "" {
+			query = dimmedStyle.Render("> type artist or genre query to play music...")
+		}
+		query = dimmedStyle.Render("> " + m.searchQuery)
 	}
+
 	if m.searching {
-		query = m.spinner.View() + " " + dimmedStyle.Render(m.searchQuery)
+		query = m.spinner.View() + dimmedStyle.Render(m.searchQuery)
 	}
+
 	sb.WriteString(lipgloss.NewStyle().Padding(0, 2).Render(query) + "\n\n")
 
 	if m.trackDownloaded {
@@ -269,8 +320,8 @@ func (m *OnlineModel) View() string {
 
 	sb.WriteString("\n\n")
 	sb.WriteString(lipgloss.NewStyle().Padding(0, 2).Render(
-		dimmedStyle.Render("• enter: search • esc: clear query \n" +
-			"• ctrl+p: pause/play • ctrl+n: next track • ctrl+b: previous track • ctrl+d: download the track • ctrl+q: quit"),
+		dimmedStyle.Render("• enter: search • esc: clear query • q / ?: to search\n" +
+			"• space: pause/play • -->: next track • <--: previous track • ctrl+d: download the track • ctrl+q: quit"),
 	))
 
 	return sb.String()
