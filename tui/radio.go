@@ -104,7 +104,7 @@ func (m OnlineModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.focus = focusPlayer
 				return m, debounceSearch(m.searchQuery)
 			}
-		case "ctrl+p", " ":
+		case " ":
 			if m.focus == focusSearch {
 				m.searchQuery += msg.String()
 				return m, nil
@@ -117,12 +117,12 @@ func (m OnlineModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.paused = true
 			}
 			return m, nil
-		case "ctrl+n", "right":
+		case "right":
 			if m.focus == focusPlayer {
 				m.player.Next()
 				return m, nil
 			}
-		case "ctrl+b", "left":
+		case "left":
 			if m.focus == focusPlayer {
 				m.player.Prev()
 				return m, nil
