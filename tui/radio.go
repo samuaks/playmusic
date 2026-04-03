@@ -96,6 +96,18 @@ func (m OnlineModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.focus = focusPlayer
 				return m, nil
 			}
+		case "o":
+			if m.focus == focusPlayer && m.result != nil && m.result.YTVideoURL != "" {
+				if !m.paused {
+					m.player.Pause()
+					m.paused = true
+				}
+				_ = OpenURL(m.result.YTVideoURL)
+				return m, nil
+			} else if m.focus == focusSearch {
+				m.searchQuery += msg.String()
+				return m, nil
+			}
 		case "enter":
 			if m.focus == focusSearch && m.searchQuery != "" {
 				if m.result != nil {
@@ -325,7 +337,8 @@ func (m OnlineModel) View() string {
 	sb.WriteString("\n\n")
 	sb.WriteString(lipgloss.NewStyle().Padding(0, 2).Render(
 		dimmedStyle.Render("• enter: search • esc: clear query • q / ?: to search\n" +
-			"• space: pause/play • -->: next track • <--: previous track • ctrl+d: download the track • ctrl+q: quit"),
+			"• space: pause/play • -->: next track • <--: previous track\n" +
+			"• ctrl+d: download the track • ctrl+q: quit • o: open in browser"),
 	))
 
 	return sb.String()
