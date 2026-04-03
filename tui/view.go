@@ -3,6 +3,8 @@ package tui
 import (
 	"fmt"
 	. "playmusic/helpers"
+	"playmusic/library"
+	"time"
 
 	"github.com/charmbracelet/lipgloss"
 )
@@ -36,6 +38,22 @@ func (m Model) playerBarView() string {
 
 	return barStyle.Width(m.width - 2).Render(
 		fmt.Sprintf("%s\n%s\n%s\n%s", nowPlaying, elapsed, m.progress.ViewAs(percent), m.helpView()))
+}
+
+func GetProgressPercentage(elapsed time.Duration, current int, tracks []library.Track) float64 {
+	if current == -1 || len(tracks) == 0 {
+		return 0
+	}
+
+	track := tracks[current]
+	if track.Duration > 0 {
+		percent := float64(elapsed) / float64(track.Duration)
+		if percent > 1 {
+			return 1
+		}
+		return percent
+	}
+	return 0
 }
 
 func (m Model) trackProgress() (percent float64, elapsed string) {
