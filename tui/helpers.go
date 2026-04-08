@@ -3,6 +3,7 @@ package tui
 import (
 	"fmt"
 	"math/rand"
+	"path/filepath"
 	. "playmusic/library"
 	"sort"
 	"strings"
@@ -12,6 +13,24 @@ import (
 
 func setTerminalTitle(title string) {
 	fmt.Printf("\033]0;%s\007", title)
+}
+
+func isExternalPlaybackTrack(track Track) bool {
+	return strings.EqualFold(filepath.Ext(track.Path), ".mp4")
+}
+func mediaTypeLabel(track Track) string {
+	if isExternalPlaybackTrack(track) {
+		return "[VIDEO]"
+	}
+	return "[AUDIO]"
+}
+
+func (m *Model) syncPlaybackModeForCurrentTrack() {
+	if m.current < 0 || m.current >= len(m.tracks) {
+		m.externalPlayback = false
+		return
+	}
+	m.externalPlayback = isExternalPlaybackTrack(m.tracks[m.current])
 }
 
 func (m Model) filteredTracks() []Track {

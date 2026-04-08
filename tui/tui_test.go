@@ -44,6 +44,71 @@ func TestModelUpdateAddsDiscoveredLibraryTrack(t *testing.T) {
 	}
 }
 
+func TestTrackItemDescriptionIncludesAudioFlag(t *testing.T) {
+	item := trackItem{track: library.Track{
+		Trackname: "Audio Track",
+		Path:      "/music/audio.mp3",
+		Filename:  "audio.mp3",
+		Duration:  3*time.Minute + 5*time.Second,
+	}}
+
+	description := item.Description()
+	if !strings.Contains(description, "[AUDIO]") {
+		t.Fatalf("expected audio flag in description, got %q", description)
+	}
+}
+
+func TestTrackItemDescriptionIncludesVideoFlag(t *testing.T) {
+	item := trackItem{track: library.Track{
+		Trackname: "Video Track",
+		Path:      "/music/video.mp4",
+		Filename:  "video.mp4",
+		Duration:  3*time.Minute + 5*time.Second,
+	}}
+
+	description := item.Description()
+	if !strings.Contains(description, "[VIDEO]") {
+		t.Fatalf("expected video flag in description, got %q", description)
+	}
+}
+
+func TestHelpViewShowsExternalPlaybackHotkeys(t *testing.T) {
+	model := NewModel(nil, nil)
+	model.externalPlayback = true
+
+	view := model.helpView()
+
+	if !strings.Contains(view, GLOBAL_HELP_TEXT_EXTERNAL) {
+		t.Fatalf("expected external playback help text, got %q", view)
+	}
+	if strings.Contains(view, "space pause/resume") {
+		t.Fatalf("did not expect local pause/resume hotkey while in external playback mode, got %q", view)
+	}
+}
+
+func TestPlayerBarViewShowsExternalPlaybackMessage(t *testing.T) {
+	model := NewModel([]library.Track{
+		{
+			Trackname: "Video Track",
+			Path:      "/music/video.mp4",
+			Filename:  "video.mp4",
+			Duration:  2 * time.Minute,
+		},
+	}, nil)
+	model.width = 120
+	model.current = 0
+	model.externalPlayback = true
+
+	view := model.playerBarView()
+
+	if !strings.Contains(view, "Playing in external player") {
+		t.Fatalf("expected external playback message in player bar, got %q", view)
+	}
+	if strings.Contains(view, "0:00 /") {
+		t.Fatalf("did not expect elapsed/duration display in external playback mode, got %q", view)
+	}
+}
+
 func TestModelUpdateSkipsDuplicateDiscoveredLibraryTrack(t *testing.T) {
 	initial := []library.Track{
 		{
@@ -764,6 +829,29 @@ func TestModelUpdateTypingInListFocusDoesNotChangeQueryOrFilter(t *testing.T) {
 	}
 }
 
+func TestModelUpdateEnterInListFocusSetsExternalPlaybackForMP4(t *testing.T) {
+	model := NewModel([]library.Track{
+		{
+			Trackname: "Video Track",
+			Path:      "/music/video.mp4",
+			Filename:  "video.mp4",
+		},
+	}, nil)
+	model.focus = focusList
+
+	updatedModel, cmd := model.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	got := updatedModel.(Model)
+
+	if cmd == nil {
+		t.Fatal("expected playback cmd on enter in list focus")
+	}
+	if got.current != 0 {
+		t.Fatalf("expected current index 0 after enter in list focus, got %d", got.current)
+	}
+	if !got.externalPlayback {
+		t.Fatal("expected external playback mode to be enabled for mp4 track")
+	}
+}
 func TestModelUpdateBackspaceInSearchFocusUpdatesQueryAndFilter(t *testing.T) {
 	model := NewModel([]library.Track{
 		{Trackname: "Abba", Path: "/music/abba.mp3", Filename: "abba.mp3"},
@@ -943,6 +1031,29 @@ func TestSearchBarViewShowsPromptAndQueryInSearchFocus(t *testing.T) {
 // 	}
 // }
 
+func TestModelUpdateSpaceIgnoredDuringExternalPlayback(t *testing.T) {
+	model := NewModel([]library.Track{
+		{
+			Trackname: "Video Track",
+			Path:      "/music/video.mp4",
+			Filename:  "video.mp4",
+		},
+	}, nil)
+	model.focus = focusList
+	model.current = 0
+	model.externalPlayback = true
+	model.paused = false
+
+	updatedModel, cmd := model.Update(tea.KeyMsg{Type: tea.KeySpace})
+	got := updatedModel.(Model)
+
+	if cmd != nil {
+		t.Fatalf("expected nil cmd when space is ignored during external playback, got %v", cmd)
+	}
+	if got.paused {
+		t.Fatal("expected paused state to remain unchanged during external playback")
+	}
+}
 func TestHelpViewShowsOnlyGlobalHotkeysWithoutSearchKeys(t *testing.T) {
 	model := NewModel(nil, nil)
 

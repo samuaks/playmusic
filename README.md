@@ -5,7 +5,7 @@ A modular command-line media player written in Go. Uses [beep](https://github.co
 ## Features
 - Plays audio files from a `Media` directory automatically
 - Native support for mp3, flac, wav, and ogg without any external dependencies
-- Extended format support (m4a, aac, opus) when FFmpeg is installed
+- Extended format support (m4a, mp4, aac, opus) when FFmpeg is installed
 - Displays track listing with durations on startup
 - Modular architecture split across `library`, `player`, and `colors` packages
 - Search and stream songs from the web
@@ -19,6 +19,7 @@ A modular command-line media player written in Go. Uses [beep](https://github.co
 | .wav       | No |
 | .ogg       | No |
 | .m4a       | Yes |
+| .mp4       | Yes |
 | .aac       | Yes |
 | .opus      | Yes |
 | streaming  | Yes |
