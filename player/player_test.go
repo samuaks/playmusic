@@ -1,9 +1,12 @@
 package player
 
 import (
+	"os"
+	"os/exec"
 	"path/filepath"
 	. "playmusic/decoder"
 	"runtime"
+	"strconv"
 	"testing"
 	"time"
 )
@@ -92,6 +95,96 @@ func TestPlayM4AWithFFmpeg(t *testing.T) {
 		t.Errorf("expected no error playing m4a, got: %v", err)
 	}
 	defer p.Stop()
+}
+
+func TestPlayMP4UsesExternalVideoPlayer(t *testing.T) {
+	originalLauncher := launchVideoPlayer
+	defer func() { launchVideoPlayer = originalLauncher }()
+
+	var called bool
+	var gotPath string
+	launchVideoPlayer = func(path string) (*exec.Cmd, error) {
+		called = true
+		gotPath = path
+		cmd := exec.Command(os.Args[0], "-test.run=TestHelperExternalPlayerProcess")
+		cmd.Env = append(os.Environ(),
+			"GO_WANT_HELPER_EXTERNAL_PLAYER=1",
+			"GO_HELPER_SLEEP_MS=20",
+		)
+		if err := cmd.Start(); err != nil {
+			return nil, err
+		}
+		return cmd, nil
+	}
+
+	p := &Player{}
+	if err := p.Play("sample.mp4"); err != nil {
+		t.Fatalf("expected mp4 playback to start, got error: %v", err)
+	}
+	defer p.Stop()
+
+	if !called {
+		t.Fatal("expected external video launcher to be used for mp4")
+	}
+	if gotPath != "sample.mp4" {
+		t.Fatalf("expected launcher to receive sample.mp4, got %q", gotPath)
+	}
+	if p.ctrl != nil {
+		t.Fatal("expected beep ctrl to stay nil for external video playback")
+	}
+
+	select {
+	case <-p.Done():
+	case <-time.After(2 * time.Second):
+		t.Fatal("expected external mp4 playback to eventually complete")
+	}
+}
+
+func TestStopEndsExternalVideoPlayback(t *testing.T) {
+	originalLauncher := launchVideoPlayer
+	defer func() { launchVideoPlayer = originalLauncher }()
+
+	launchVideoPlayer = func(path string) (*exec.Cmd, error) {
+		cmd := exec.Command(os.Args[0], "-test.run=TestHelperExternalPlayerProcess")
+		cmd.Env = append(os.Environ(),
+			"GO_WANT_HELPER_EXTERNAL_PLAYER=1",
+			"GO_HELPER_SLEEP_MS=5000",
+		)
+		if err := cmd.Start(); err != nil {
+			return nil, err
+		}
+		return cmd, nil
+	}
+
+	p := &Player{}
+	if err := p.Play("sample.mp4"); err != nil {
+		t.Fatalf("expected mp4 playback to start, got error: %v", err)
+	}
+
+	time.Sleep(100 * time.Millisecond)
+	p.Stop()
+
+	select {
+	case <-p.Done():
+	case <-time.After(2 * time.Second):
+		t.Fatal("expected stop to signal playback completion for external player")
+	}
+	if p.externalCmd != nil {
+		t.Fatal("expected external command to be cleared after stop")
+	}
+}
+
+func TestHelperExternalPlayerProcess(t *testing.T) {
+	if os.Getenv("GO_WANT_HELPER_EXTERNAL_PLAYER") != "1" {
+		return
+	}
+
+	sleepMs, _ := strconv.Atoi(os.Getenv("GO_HELPER_SLEEP_MS"))
+	if sleepMs <= 0 {
+		sleepMs = 1000
+	}
+	time.Sleep(time.Duration(sleepMs) * time.Millisecond)
+	os.Exit(0)
 }
 
 func TestPauseResume(t *testing.T) {

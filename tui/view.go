@@ -17,6 +17,16 @@ func (m Model) playerBarView() string {
 		elapsed = dimmedStyle.Render("0:00 / 0:00")
 	} else {
 		track := m.tracks[m.current]
+		if m.externalPlayback {
+			status := ">"
+			if m.isRandom {
+				status += " rnd"
+			}
+			nowPlaying = currentStyle.Render(fmt.Sprintf("%s %s", status, track.Trackname))
+			external := dimmedStyle.Render("Playing in external player. Use external controls.")
+			return barStyle.Width(m.width - 2).Render(
+				fmt.Sprintf("%s\n%s\n%s", nowPlaying, external, m.helpView()))
+		}
 		if track.Duration > 0 {
 			percent = float64(m.elapsed) / float64(track.Duration)
 			if percent > 1 {
@@ -89,5 +99,8 @@ func (m Model) libraryScanStatusView() string {
 }
 
 func (m Model) helpView() string {
+	if m.externalPlayback {
+		return dimmedStyle.Render(GLOBAL_HELP_TEXT_EXTERNAL)
+	}
 	return dimmedStyle.Render(GLOBAL_HELP_TEXT)
 }

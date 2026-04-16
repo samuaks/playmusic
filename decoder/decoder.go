@@ -49,6 +49,7 @@ var beepFormats = map[string]bool{
 var ffmpegFormats = map[string]bool{
 	".aac":  true,
 	".m4a":  true,
+	".mp4":  true,
 	".opus": true,
 }
 

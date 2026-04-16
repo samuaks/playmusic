@@ -78,6 +78,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.updateListItems()
 				return m, nil
 			}
+			if m.externalPlayback {
+				return m, nil
+			}
 			if m.paused {
 				m.player.Resume()
 				m.paused = false
@@ -98,6 +101,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.elapsed = 0
 				m.paused = false
 				m.current = idx
+				m.syncPlaybackModeForCurrentTrack()
 				m.list.SetDelegate(newDelegate(m.tracks[m.current].Identifier(), m.searchQuery))
 				m.player.Next()
 				return m, m.playCurrent()
@@ -127,7 +131,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 	case tickMsg:
-		if !m.paused && m.player.IsPlaying() {
+		if !m.paused && !m.externalPlayback && m.player.IsPlaying() {
 			m.elapsed += 500 * time.Millisecond
 		}
 		return m, tick()
@@ -135,6 +139,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.elapsed = 0
 		m.paused = false
 		m.current = m.findNext()
+		m.syncPlaybackModeForCurrentTrack()
 		m.list.SetDelegate(newDelegate(m.tracks[m.current].Identifier(), m.searchQuery))
 		m.list.Select(m.current)
 		return m, m.playCurrent()

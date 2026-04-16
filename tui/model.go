@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"fmt"
 	"playmusic/library"
 	. "playmusic/player"
 	"time"
@@ -14,8 +15,9 @@ type trackItem struct {
 }
 
 func (t trackItem) Title() string { return t.track.Trackname } // u can use some of the additional metadata for the UI
-
-func (t trackItem) Description() string { return t.track.FormatDuration() }
+func (t trackItem) Description() string {
+	return fmt.Sprintf("%s %s", mediaTypeLabel(t.track), t.track.FormatDuration())
+}
 func (t trackItem) FilterValue() string { return t.track.Trackname }
 
 type focusMode int
@@ -26,23 +28,24 @@ const (
 )
 
 type Model struct {
-	tracks          []library.Track
-	current         int
-	elapsed         time.Duration
-	paused          bool
-	player          *Player
-	list            list.Model
-	progress        progress.Model
-	width           int
-	height          int
-	focus           focusMode
-	searchQuery     string
-	scanCh          <-chan library.ScanEvent
-	scanning        bool
-	scanDone        bool
-	scanError       error
-	scanAdded       int
-	isRandom        bool
+	tracks           []library.Track
+	current          int
+	elapsed          time.Duration
+	paused           bool
+	externalPlayback bool
+	player           *Player
+	list             list.Model
+	progress         progress.Model
+	width            int
+	height           int
+	focus            focusMode
+	searchQuery      string
+	scanCh           <-chan library.ScanEvent
+	scanning         bool
+	scanDone         bool
+	scanError        error
+	scanAdded        int
+	isRandom         bool
 }
 
 func NewModel(tracks []library.Track, scanCh <-chan library.ScanEvent) Model {

@@ -15,6 +15,7 @@ func TestIsSupported(t *testing.T) {
 		{"document.txt", false, false},
 		{"image.jpg", false, false},
 		{"song.m4a", true, true},
+		{"song.mp4", true, true},
 		{"song.aac", true, true},
 		{"song.opus", true, true},
 	}
