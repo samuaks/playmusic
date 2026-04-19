@@ -141,22 +141,28 @@ func (m OnlineModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		case "ctrl+d":
 			return m, m.downloadTrack()
+
 		default:
 			if m.focus == focusSearch && len(msg.String()) > 0 {
-				if len(msg.String()) == 1 {
-					r := rune(msg.String()[0])
-					if unicode.IsLetter(r) || unicode.IsNumber(r) || unicode.IsSpace(r) || unicode.IsPunct(r) {
-						m.searchQuery += msg.String()
+				runes := []rune(msg.String())
+				for _, r := range runes {
+					if unicode.IsGraphic(r) {
+						/*
+							if len(msg.String()) == 1 {
+								r := rune(msg.String()[0])
+								if unicode.IsGraphic(r) {*/
+						m.searchQuery += string(r)
 						return m, nil
 					}
 				}
 			}
 		}
-
 	case searchDebounceMsg:
-		if msg.query == m.searchQuery && msg.query != "" {
+		queryrunes := []rune(m.searchQuery)
+		if len(queryrunes) > 0 {
 			m.searching = true
-			return m, tea.Batch(m.runOnlineSearch(msg.query), m.spinner.Tick)
+			return m,
+				tea.Batch(m.runOnlineSearch(msg.query), m.spinner.Tick)
 		}
 
 	case searchTrackFoundMsg:
