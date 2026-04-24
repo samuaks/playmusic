@@ -1,0 +1,87 @@
+name: Development task
+description: Create a contributor-friendly development task with clear scope.
+title: "[task]: "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template for planned work that should be understandable to a first-time contributor.
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: Why does this work matter to the project or user?
+      placeholder: This matters because...
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem statement
+      description: What is wrong or missing today?
+      placeholder: Right now...
+    validations:
+      required: true
+  - type: textarea
+    id: scope_in
+    attributes:
+      label: In scope
+      description: Describe what should be included.
+      placeholder: |
+        - update...
+        - add...
+        - verify...
+    validations:
+      required: true
+  - type: textarea
+    id: scope_out
+    attributes:
+      label: Out of scope
+      description: Explicitly state what should not be done in this issue.
+      placeholder: |
+        - do not refactor...
+        - do not redesign...
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: Write checkable outcomes.
+      placeholder: |
+        - [ ] ...
+        - [ ] ...
+    validations:
+      required: true
+  - type: textarea
+    id: starting_points
+    attributes:
+      label: Starting points
+      description: Files, packages, tests, or PRs worth reading first.
+      placeholder: main.go, library/scan.go, tui/update.go
+    validations:
+      required: true
+  - type: dropdown
+    id: difficulty
+    attributes:
+      label: Difficulty
+      options:
+        - easy
+        - medium
+        - hard
+    validations:
+      required: true
+  - type: dropdown
+    id: estimate
+    attributes:
+      label: Estimated time
+      options:
+        - less than 1 hour
+        - 1-2 hours
+        - half day
+        - 1 day
+        - more than 1 day
+    validations:
+      required: true

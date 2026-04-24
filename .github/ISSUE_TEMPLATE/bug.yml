@@ -1,0 +1,91 @@
+name: Bug report
+description: Report broken behavior with enough context to reproduce it.
+title: "[bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug.
+
+        Please describe the issue in a way that a new contributor can understand and reproduce.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What is broken?
+      placeholder: The app crashes when...
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: Why does this matter to the user or contributor?
+      placeholder: I was trying to...
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: List the smallest reliable sequence.
+      placeholder: |
+        1. Run...
+        2. Open...
+        3. Press...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      placeholder: The player should...
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      placeholder: Instead, the app...
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, terminal, Go version, FFmpeg availability, anything relevant.
+      placeholder: Windows 11, PowerShell, Go 1.25.5, ffplay installed
+  - type: textarea
+    id: starting_points
+    attributes:
+      label: Possible starting points
+      description: Optional. Add files or packages if you already know where the bug may live.
+      placeholder: player/player.go, tui/update.go
+  - type: dropdown
+    id: difficulty
+    attributes:
+      label: Difficulty guess
+      description: Optional. Helps maintainers shape the issue for newcomers.
+      options:
+        - easy
+        - medium
+        - hard
+        - unknown
+    validations:
+      required: false
+  - type: dropdown
+    id: estimate
+    attributes:
+      label: Time estimate guess
+      description: Optional. Choose the smallest realistic estimate.
+      options:
+        - less than 1 hour
+        - 1-2 hours
+        - half day
+        - 1 day
+        - more than 1 day
+        - unknown
+    validations:
+      required: false
