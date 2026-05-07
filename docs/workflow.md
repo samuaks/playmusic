@@ -24,6 +24,8 @@ If labels are missing, look for issues with:
 - concrete acceptance criteria;
 - hints about which files to read first.
 
+If those details are missing, improving the issue before coding is useful work. Add context, scope, acceptance criteria, and starting points so another contributor could pick it up later.
+
 ## Suggested Difficulty Scale
 
 | Level | Typical scope | Typical time |
@@ -31,6 +33,20 @@ If labels are missing, look for issues with:
 | `easy` | tests, copy, one small behavior fix | 30 min to 2 h |
 | `medium` | one-package logic change with tests | half day to 1 day |
 | `hard` | cross-package behavior, concurrency, release, or architecture work | more than 1 day |
+
+## Suggested Story Points
+
+Story points are rough size hints, not deadlines.
+
+| Points | Typical meaning |
+| --- | --- |
+| `1` | docs, copy, one focused test, or a tiny behavior fix |
+| `2` | small one-package change with clear verification |
+| `3` | one-package behavior change with tests and manual checking |
+| `5` | larger work with several files or uncertain edge cases |
+| `8` | too large for a first contribution; split before starting |
+
+For first-time contributors, prefer `1`, `2`, or a very clear `3`.
 
 ## What A Good Issue Should Contain
 

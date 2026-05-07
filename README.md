@@ -8,6 +8,19 @@ The project is meant to be useful in two ways:
 
 Project language is English for repository docs, issues, pull requests, and other contributor-facing materials.
 
+## Related Application
+
+This repository is the CLI/TUI version of PlayMusic. It runs in the terminal and is focused on local playback, keyboard-driven navigation, and Go contributor practice.
+
+The related desktop application lives at [samuaks/musical-palm-tree](https://github.com/samuaks/musical-palm-tree). That project opens in a separate native window and is built with Tauri, React, and Rust. Use that repository for GUI application work such as the windowed library view, waveform player UI, video viewport, desktop packaging, and Tauri-specific behavior.
+
+For a longer comparison, read [docs/related-projects.md](docs/related-projects.md).
+
+When opening an issue or pull request, choose the repository based on the user surface:
+
+- terminal behavior, Go packages, CLI/TUI controls, or this contributor workflow: use this repository;
+- desktop window behavior, React UI, Rust/Tauri scanner or waveform code, or native app packaging: use `samuaks/musical-palm-tree`.
+
 ## Start Here
 
 - Want to run the app quickly? Start with [Quick Start](#quick-start).
@@ -93,6 +106,7 @@ For `.mp4` files, PlayMusic hands playback to `ffplay`, so playback controls hap
 - [docs/workflow.md](docs/workflow.md): how to choose a task, keep scope small, and know what "done" means.
 - [docs/architecture.md](docs/architecture.md): package map and main application flows.
 - [docs/testing.md](docs/testing.md): local testing, CI expectations, and manual verification tips.
+- [docs/related-projects.md](docs/related-projects.md): how this CLI/TUI repository relates to the separate desktop application.
 
 ## Community
 

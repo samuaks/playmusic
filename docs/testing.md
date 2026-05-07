@@ -14,6 +14,16 @@ go test ./...
 
 This is the recommended default before opening a pull request.
 
+For verbose output, use `-v`:
+
+```bash
+go test -v ./...
+go test -v ./library
+go test -run TestName -v ./tui
+```
+
+Verbose output is useful when you want to see each test name, investigate a failing package, or include clearer verification notes in a pull request.
+
 Important: the full local suite includes `yt_dlp` integration-style tests. Those tests may require internet access and the ability to install or run external tooling.
 
 ## Also Run The App
