@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Support guide
+    url: https://github.com/samuaks/playmusic/blob/master/SUPPORT.md
+    about: Read where to ask for help and what response times to expect.
+  - name: Security policy
+    url: https://github.com/samuaks/playmusic/blob/master/SECURITY.md
+    about: Read how to report possible security issues without posting sensitive details publicly.

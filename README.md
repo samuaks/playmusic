@@ -1,130 +1,127 @@
-# Go Media Player
+# PlayMusic
 
-A modular command-line media player written in Go. Uses [beep](https://github.com/gopxl/beep) for native audio playback with optional FFmpeg support for extended format compatibility.
+PlayMusic is a terminal media player written in Go and a student-friendly open-source playground for learning collaborative development.
 
-## Features
-- Plays audio files from a `Media` directory automatically
-- Native support for mp3, flac, wav, and ogg without any external dependencies
-- Extended format support (m4a, mp4, aac, opus) when FFmpeg is installed
-- Displays track listing with durations on startup
-- Modular architecture split across `library`, `player`, and `colors` packages
-- Search and stream songs from the web
+The project is meant to be useful in two ways:
+- as a real application you can run, inspect, and improve;
+- as a safe place for Hive students/sprinters and first-time contributors to practice reading code, discussing scope, writing tests, and opening pull requests.
 
-## Supported Formats
+Project language is English for repository docs, issues, pull requests, and other contributor-facing materials.
 
-| Format     | Requires FFmpeg |
-|------------|----------------|
-| .mp3       | No |
-| .flac      | No |
-| .wav       | No |
-| .ogg       | No |
-| .m4a       | Yes |
-| .mp4       | Yes |
-| .aac       | Yes |
-| .opus      | Yes |
-| streaming  | Yes |
+## Related Application
 
+This repository is the CLI/TUI version of PlayMusic. It runs in the terminal and is focused on local playback, keyboard-driven navigation, and Go contributor practice.
 
-## Roadmap
+The related desktop application lives at [samuaks/musical-palm-tree](https://github.com/samuaks/musical-palm-tree). That project opens in a separate native window and is built with Tauri, React, and Rust. Use that repository for GUI application work such as the windowed library view, waveform player UI, video viewport, desktop packaging, and Tauri-specific behavior.
 
-| # | Description | Type | Status |
-|---|-------------|------|--------|
-| 1 | Bubble Tea TUI implementation | Feature | Partial |
-| 2 | Pause / Resume / Next track support | Feature | Done |
-| 3 | Volume control | Feature | Not Planned |
-| 4 | Custom media directory / system-wide media scanning | Feature | Partial |
-| 5 | Headphone wear detection (auto-pause on removal) | Feature | Research |
-| 6 | Sample rate mismatch on some tracks | Bug | Known/Fixed |
-| 7 | CI/CD — GitHub Actions for running tests and building release executables | Feature | Planned |
-| 8 | Album / playlist support | Feature | Planned |
-| 9 | Artist fetching (background job) | Feature | Planned |
-| 10 | Play songs from external sources (YouTube) | Feature | Done |
+For a longer comparison, read [docs/related-projects.md](docs/related-projects.md).
 
+When opening an issue or pull request, choose the repository based on the user surface:
 
+- terminal behavior, Go packages, CLI/TUI controls, or this contributor workflow: use this repository;
+- desktop window behavior, React UI, Rust/Tauri scanner or waveform code, or native app packaging: use `samuaks/musical-palm-tree`.
 
-## Usage
+## Start Here
+
+- Want to run the app quickly? Start with [Quick Start](#quick-start).
+- Want to make your first contribution? Read [docs/onboarding.md](docs/onboarding.md).
+- Need contribution rules? Read [CONTRIBUTING.md](CONTRIBUTING.md).
+- Need help or response expectations? Read [SUPPORT.md](SUPPORT.md).
+
+## What You Can Do In Your First Hour
+
+1. Run the app against the local `Media/` folder.
+2. Learn how `main`, `library`, `tui`, `player`, and `decoder` fit together.
+3. Pick a small test, bug, or focused UI issue.
+4. Open a first pull request without needing private project context.
+
+## Current Status
+
+### Working Today
+
+- Bubble Tea TUI for browsing and playing a local music library.
+- Audio playback through `beep` for `.mp3`, `.flac`, `.wav`, and `.ogg`.
+- FFmpeg-backed support for additional audio formats such as `.m4a`, `.aac`, and `.opus` when FFmpeg is installed.
+- Fast startup from the local `Media/` folder, followed by background scanning of other library directories.
+- Live local filtering with an explicit search mode opened by `q` or `?`.
+- Random next-track mode toggled with `Ctrl+R`.
+- External video handoff for `.mp4` files through `ffplay`.
+- Go test coverage across the core packages plus GitHub Actions for CI and releases.
+
+### Still Evolving
+
+- Online, radio, and external-search flows are actively evolving and should not be treated as the default contributor path.
+- If something in the contributor flow is unclear, open a regular issue and describe the gap in context.
+
+## Quick Start
+
+### Requirements
+
+- Go `1.25.5` or newer.
+- FFmpeg if you want extended audio-format support and external `.mp4` playback through `ffplay`.
+- Local media files in the repository `Media/` folder if you want immediate content on startup.
+- Internet access on the first run may be needed so the app can resolve or install its `yt-dlp` helper binary.
+
+### Run The Full Test Suite
+
+```bash
+go test ./...
+```
+
+Note: the full local suite includes `yt_dlp` integration-style tests, so it may require internet access and external tooling on your machine.
+
+### Start The App
+
 ```bash
 go run .
 ```
 
-or build and run the executable:
+You can also build the binary first:
+
 ```bash
 go build
 ./playmusic
 ```
 
-Drop your media files into the `Media` directory and they will be played in order.
-Player will also search for the music in common places in your PC and will add them to the playlist.
+On Windows the binary name will be `playmusic.exe`.
 
-## Hotkeys
+## Controls
 
-- `up/down` - navigate list
-- `space` - pause/resume
-- `enter` in list focus - play selected track
-- `q` or `?` - enter search focus
-- `enter` in search focus - apply the local filter and return to list focus
-- `esc` in search focus - clear query and return to list focus
+| Key | Action |
+| --- | --- |
+| `Up` / `Down` | Move through the list |
+| `Enter` | Play the selected track |
+| `Space` | Pause or resume audio playback |
+| `q` or `?` | Enter search mode |
+| `Enter` in search mode | Keep the current filter and return to list mode |
+| `Esc` in search mode | Clear the filter and return to list mode |
+| `Ctrl+R` | Toggle random next-track mode |
+| `Ctrl+Q` or `Ctrl+C` | Quit |
 
-## Requirements
+For `.mp4` files, PlayMusic hands playback to `ffplay`, so playback controls happen in the external player instead of inside the TUI.
 
-- Go 1.21 or later
-- FFmpeg (optional) — install and add to PATH for extended format support. For Windows all can be done by running command: winget install ffmpeg. 
-- yt-dlp will be installed to the temporary directory on your PC and will be used for the search and stream music feature.
+## Project Map
+
+- [docs/onboarding.md](docs/onboarding.md): guided path from clone to first PR in 30-60 minutes.
+- [docs/workflow.md](docs/workflow.md): how to choose a task, keep scope small, and know what "done" means.
+- [docs/architecture.md](docs/architecture.md): package map and main application flows.
+- [docs/testing.md](docs/testing.md): local testing, CI expectations, and manual verification tips.
+- [docs/related-projects.md](docs/related-projects.md): how this CLI/TUI repository relates to the separate desktop application.
+
+## Community
+
+- [CONTRIBUTING.md](CONTRIBUTING.md)
+- [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
+- [SUPPORT.md](SUPPORT.md)
+- [SECURITY.md](SECURITY.md)
+- [LICENSE](LICENSE)
+
+## Known Notes For Contributors
+
+- The primary contributor path is local library playback and TUI behavior.
+- The current GitHub Actions PR workflow excludes the `yt_dlp` package, so local `go test ./...` remains the best pre-PR verification command.
+- `config.go` contains path-resolution helpers that are not yet wired into the current `main.go` flow, so do not document them as a supported user-facing configuration system.
 
 ## Attribution
-Music used in demo:
->'Shadows and Dust' by Scott Buckley – released under CC-BY 4.0. www.scottbuckley.com.au
->'Rites of passage' by Scott Buckley – released under CC-BY 4.0. www.scottbuckley.com.au
 
-
-
-## Concurrency
-
-The player uses goroutines and channels to manage concurrent operations and user input
-
-### WaitGroup() - do many things at once and wait for them ALL to finish before continuing.
-
-Used in library package to probe all track durations concurrently, improving startup time significantly when the number of tracks is large. 
-Without this the durations would be probed sequentially, in which time would scale linearly with the number of tracks.
-
-Visual example of the concept:
-
-```
-|-main: [wg.Wait()... blocking until all done...]
-|-goroutine 1: [ProbeDuration(track1)...]
-|-goroutine 2: [ProbeDuration(track2)...]
-|-goroutine 3: [ProbeDuration(track3)...]
-```
-
-### Non-blocking user input handling with goroutines
-
-Used for input handling in main.go while tracks are playing.
-Without a goroutine, main thread could either play music OR handle user input, not both.
-
-```go
-go handleInput(player) // runs independently in the background while main thread continues to play music
-
-for _, track := range tracks {
-    player.Play(track) 
-    player.Wait() // unblocks next track when song naturally finishes OR when user presses a key to skip 
-}
-```
-
-### Bubbletea event loop (main goroutine)
-
-`Update(), View()` Handles messages and updates the view
-
-`Player goroutine` Plays music
-
-`tea.Cmd goroutine` Searcher.Search() blocks here, not in main loop 
-
-
-### Ideal approach on startup
-
-1. LoadLibrary("Media") - blocking 
-2. Start TUI with immediate local tracks
-3. `go ScanSystem()` background job, sends new tracks to TUI via channels
-    * `newTrackMsg` everytime new track was found 
-    * TUI appends it to the list
-
-    
+Demo music in the repository is attributed in the existing project materials and should remain credited when reused for demos.
